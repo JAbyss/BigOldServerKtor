@@ -6,10 +6,10 @@ import org.litote.kmongo.coroutine.CoroutineDatabase
 class TokenDataSourceImpl(
     private val db: CoroutineDatabase
 ): TokenDataSource {
+
     override suspend fun checkOnExistToken(token: String): Boolean {
         val isTokenExist = db.getCollection<Token>("token").find("{ \"_id\": \"$token\" }").toList().isNotEmpty()
 
         return isTokenExist
     }
-
 }

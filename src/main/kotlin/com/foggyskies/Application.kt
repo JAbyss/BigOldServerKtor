@@ -39,7 +39,6 @@ data class ChatSession(
     val sessionID: String
 )
 
-
 @Suppress("unused")
 fun Application.module() {
 

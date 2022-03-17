@@ -15,7 +15,6 @@ import kotlinx.serialization.json.Json
 
 fun Route.usersRoutes(roomUserController: UserRoomController) {
 
-
     webSocket("/user") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
         val isTokenExist = roomUserController.checkOnExistToken(token.toString())
@@ -29,12 +28,14 @@ fun Route.usersRoutes(roomUserController: UserRoomController) {
             try {
                 incoming.consumeEach { frame ->
                     if (frame is Frame.Text) {
-                        if (frame.readText().length == 3) {
+                        if (frame.readText().length >= 3) {
                             val users = roomUserController.getUsersByUsername(frame.readText())
                             if (users.isNotEmpty()) {
                                 val parsedString = Json.encodeToString(users)
                                 send(parsedString)
                             }
+                        } else {
+                            send("[]")
                         }
                     }
                 }
