@@ -46,10 +46,11 @@ fun Application.module() {
         modules(mainModule)
     }
     install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-        })
+//        json(Json {
+//            prettyPrint = true
+//            isLenient = true
+//        })
+        json()
     }
     configureSockets()
     configureRouting()
@@ -71,7 +72,7 @@ val mainModule = module {
     single<CreateChatDataSource> {
         CreateChatDataSourceImpl(get())
     }
-    single<TokenDataSource>{
+    single<TokenDataSource> {
         TokenDataSourceImpl(get())
     }
     single<MessageDataSource> {
@@ -84,7 +85,7 @@ val mainModule = module {
         UserRoomController(get())
     }
     single {
-        CreateChatRoomController(get(),get())
+        CreateChatRoomController(get(), get())
     }
     single {
         MessageRoomController(get())

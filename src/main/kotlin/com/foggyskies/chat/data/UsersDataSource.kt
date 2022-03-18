@@ -1,8 +1,7 @@
 package com.foggyskies.chat.data
 
-import com.jetbrains.handson.chat.server.chat.data.model.Token
+import com.foggyskies.chat.routes.UserMainEntity
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
-import kotlinx.coroutines.flow.Flow
 
 interface UsersDataSource {
 
@@ -12,4 +11,11 @@ interface UsersDataSource {
 
     suspend fun getUsersByUsername(username: String): List<UsersSearch>
 
+    suspend fun getChats(token: String): List<FormattedChatDC>
+
+    suspend fun addRequestToFriend(userSender: UserNameID, idUserReceiver: String)
+
+    suspend fun getUserByToken(token: String): UserMainEntity
+
+    suspend fun acceptRequestFriend(userReceiver: UserNameID, userSender: UserNameID)
 }

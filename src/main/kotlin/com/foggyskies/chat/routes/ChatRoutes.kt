@@ -31,7 +31,9 @@ data class ChatUserEntity(
 data class ChatMainEntity(
     @BsonId
     var idChat: String = ObjectId().toString(),
-    var users: List<ChatUserEntity>
+    var firstCompanion: ChatUserEntity,
+    var secondCompanion: ChatUserEntity
+//    var users: List<ChatUserEntity>
 )
 
 fun Route.chatSocket() {
