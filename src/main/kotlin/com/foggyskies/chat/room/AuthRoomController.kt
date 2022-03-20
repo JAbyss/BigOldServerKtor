@@ -1,7 +1,7 @@
 package com.foggyskies.chat.room
 
 import com.foggyskies.chat.data.AuthDataSource
-import com.foggyskies.chat.routes.UserMainEntity
+import com.foggyskies.chat.data.model.UserMainEntity
 
 class AuthRoomController(
     private val authDataSource: AuthDataSource

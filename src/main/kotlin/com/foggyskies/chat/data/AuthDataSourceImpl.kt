@@ -1,11 +1,12 @@
 package com.foggyskies.chat.data
 
+import com.foggyskies.chat.data.model.UserMainEntity
 import com.jetbrains.handson.chat.server.chat.data.model.Token
-import com.foggyskies.chat.routes.UserMainEntity
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import org.litote.kmongo.coroutine.CoroutineDatabase
+import org.litote.kmongo.eq
 
 class AuthDataSourceImpl(
     private val db: CoroutineDatabase
@@ -16,7 +17,7 @@ class AuthDataSourceImpl(
     }
 
     override suspend fun getUser(username: String): UserMainEntity {
-        val userString = db.getCollection<UserMainEntity>("users").find("{ \"username\": \"$username\" }").toString()
+        val userString = db.getCollection<UserMainEntity>("users").find(UserMainEntity::username eq username).toString()
 
         val user = Json.decodeFromString<UserMainEntity>(userString)
 
@@ -24,13 +25,13 @@ class AuthDataSourceImpl(
     }
 
     override suspend fun checkOnExistUser(username: String): Boolean {
-       val isUserExist = db.getCollection<UserMainEntity>("users").find("{ \"username\": \"$username\" }").toList().isNotEmpty()
+       val isUserExist = db.getCollection<UserMainEntity>("users").find(UserMainEntity::username eq username).toList().isNotEmpty()
 
         return isUserExist
     }
 
     override suspend fun checkOnExistToken(username: String): Boolean {
-        val isTokenExist = db.getCollection<Token>("token").find("{ \"username\": \"$username\" }").toList().isNotEmpty()
+        val isTokenExist = db.getCollection<Token>("token").find(Token::username eq username).toList().isNotEmpty()
 
         return isTokenExist
     }
@@ -42,18 +43,18 @@ class AuthDataSourceImpl(
     }
 
     override suspend fun getToken(username: String): String {
-        val token =  db.getCollection<Token>("token").find("{ \"username\": \"$username\" }").toList()[0]
+        val token =  db.getCollection<Token>("token").find(Token::username eq username).toList()[0]
         return token.id
     }
 
     override suspend fun checkPasswordOnCorrect(password: String): Boolean {
-        val isPasswordCorrect = db.getCollection<UserMainEntity>("users").find("{ \"password\": \"$password\" }").toList().isNotEmpty()
+        val isPasswordCorrect = db.getCollection<UserMainEntity>("users").find(UserMainEntity::password eq password).toList().isNotEmpty()
 
         return isPasswordCorrect
     }
 
     override suspend fun checkOnExistEmail(e_mail: String): Boolean {
-        val isEmailExist = db.getCollection<UserMainEntity>("users").find("{ \"e_mail\": \"$e_mail\" }").toList().isNotEmpty()
+        val isEmailExist = db.getCollection<UserMainEntity>("users").find(UserMainEntity::e_mail eq e_mail).toList().isNotEmpty()
 
         return isEmailExist
     }

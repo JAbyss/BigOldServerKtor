@@ -1,6 +1,6 @@
 package com.foggyskies.chat.data
 
-import com.foggyskies.chat.routes.UserMainEntity
+import com.foggyskies.chat.data.model.UserMainEntity
 
 interface AuthDataSource {
 

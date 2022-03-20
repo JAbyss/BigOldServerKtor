@@ -4,40 +4,24 @@ import com.foggyskies.chat.routes.*
 import com.foggyskies.chat.room.AuthRoomController
 import com.foggyskies.chat.room.UserRoomController
 import io.ktor.application.*
-import io.ktor.http.*
-import io.ktor.response.*
 import io.ktor.routing.*
 import org.koin.ktor.ext.inject
-import java.io.File
 
 fun Application.configureRouting() {
     val roomAuthController by inject<AuthRoomController>()
     val roomUserController by inject<UserRoomController>()
 
     install(Routing) {
-        chatSocket()
         usersRoutes(roomUserController)
         authRoutes(roomAuthController)
         createChatRoutes()
-        subscribeRoutes()
+        chatSessionRoutes()
         chatListRoutes()
         photoRouting()
     }
 }
 
-fun Route.photoRouting() {
 
-    get("/photo{name}") {
-        val name = call.parameters["name"]
-        val file = File("photos/$name")
-        call.response.header(
-            HttpHeaders.ContentDisposition,
-            ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, name!!)
-                .toString()
-        )
-        call.respondFile(file)
-    }
-}
 
 //fun encrypt(str: String): String {
 //    var encryptString = ""

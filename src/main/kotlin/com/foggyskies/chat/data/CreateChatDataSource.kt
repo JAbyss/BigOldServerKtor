@@ -1,6 +1,10 @@
 package com.foggyskies.chat.data
 
+import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+
 interface CreateChatDataSource {
+
+    suspend fun checkOnExistChatByIdUsers(idUserFirst: String, idUserSecond: String): String
 
     suspend fun checkOnExistChat(idUser: String) : Boolean
 
@@ -10,4 +14,5 @@ interface CreateChatDataSource {
 
     suspend fun createMessages(idChat: String)
 
+    suspend fun  getUserByUsername(username: String): UsersSearch
 }

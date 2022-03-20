@@ -1,23 +1,22 @@
 package com.foggyskies
 
 import com.foggyskies.chat.data.*
-import com.foggyskies.plugin.configureRouting
-import com.foggyskies.plugin.configureSecurity
-import com.foggyskies.plugin.configureSockets
 import com.foggyskies.chat.room.AuthRoomController
 import com.foggyskies.chat.room.CreateChatRoomController
 import com.foggyskies.chat.room.MessageRoomController
 import com.foggyskies.chat.room.UserRoomController
+import com.foggyskies.plugin.configureRouting
+import com.foggyskies.plugin.configureSecurity
+import com.foggyskies.plugin.configureSockets
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.serialization.*
-import kotlinx.serialization.json.Json
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import org.koin.dsl.module
+import org.koin.ktor.ext.Koin
 import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.reactivestreams.KMongo
-import org.koin.ktor.ext.Koin
 
 @kotlinx.serialization.Serializable
 data class Message(

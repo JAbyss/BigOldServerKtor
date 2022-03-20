@@ -1,17 +1,10 @@
 package com.foggyskies.chat.routes
 
+import com.foggyskies.chat.data.model.ChatPreviewEntity
 import io.ktor.application.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import kotlinx.serialization.Serializable
-
-@Serializable
-data class ChatPreviewEntity(
-    var idChat: String,
-    var chatName: String,
-    var image: String,
-    var lastMessage: String
-)
 
 fun Route.chatListRoutes() {
     route("/chatslist") {

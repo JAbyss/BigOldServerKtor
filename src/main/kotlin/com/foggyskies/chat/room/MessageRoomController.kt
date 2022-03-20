@@ -1,9 +1,12 @@
 package com.foggyskies.chat.room
 
 import com.foggyskies.chat.data.MessageDataSource
+import com.foggyskies.chat.data.forEachSuspend
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.http.cio.websocket.*
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.text.SimpleDateFormat
@@ -14,20 +17,18 @@ class MessageRoomController(
     private val messageDataSource: MessageDataSource
 ) {
 
-    suspend fun insertOne(idChat: String, message: ChatMessage) {
+    var chatId = ""
+
+    private suspend fun insertOne(idChat: String, message: ChatMessage) {
         messageDataSource.insertOne(idChat, message)
     }
 
     suspend fun getAllMessage(idChat: String): List<ChatMessage> {
-        val messages = messageDataSource.getAllMessage(idChat)
-
-        return messages
+        return messageDataSource.getAllMessage(idChat)
     }
 
-    suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
-        val messages = messageDataSource.getFiftyMessage(idChat)
-
-        return messages
+    private suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
+        return messageDataSource.getFiftyMessage(idChat)
     }
 
     suspend fun sendMessage(senderUsername: String, message: String, members: ConcurrentHashMap<String, Member>, idChat: String) {
@@ -48,4 +49,24 @@ class MessageRoomController(
         }
     }
 
+    suspend fun onJoin(
+        username: String,
+        sessionId: String,
+        socket: WebSocketSession,
+        members: ConcurrentHashMap<String, Member>
+    ) {
+        if (!members.containsKey(username)) {
+            members[username] = Member(
+                username = username,
+                sessionId = sessionId,
+                socket = socket
+            )
+            val messages = getFiftyMessage(chatId)
+            messages.forEachSuspend { _message ->
+                val json = Json.encodeToString(_message)
+                socket.send(json)
+            }
+
+        }
+    }
 }

@@ -1,17 +1,18 @@
 package com.foggyskies.chat.data
 
+import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.extendfun.isTrue
-import com.foggyskies.chat.routes.ChatMainEntity
-import com.foggyskies.chat.routes.UserMainEntity
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
-import com.mongodb.BasicDBObject
-
-import org.bson.codecs.pojo.annotations.BsonId
-import org.bson.types.ObjectId
+import io.ktor.http.cio.websocket.*
+import io.ktor.websocket.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.onEach
+import org.bson.BsonString
+import org.bson.Document
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.util.KMongoUtil.toBson
 
 @kotlinx.serialization.Serializable
 data class ChatsDC(
@@ -37,7 +38,7 @@ class UsersDataSourceImpl(
 ) : UsersDataSource {
 
     override suspend fun checkOnExistToken(token: String): Boolean {
-        val isTokenExist = db.getCollection<Token>("token").find("{ \"_id\": \"$token\" }").toList().isNotEmpty()
+        val isTokenExist = db.getCollection<Token>("token").find(Token::id eq token).toList().isNotEmpty()
 
         return isTokenExist
     }
@@ -51,38 +52,40 @@ class UsersDataSourceImpl(
     override suspend fun getUsersByUsername(username: String): List<UsersSearch> {
         val users = db.getCollection<UsersSearch>("users")
             .find(" { \"username\": { ${MongoOperator.regex}: '^$username.+', ${MongoOperator.options}: 'i' } } ")
-            .limit(20).toList()
+            .limit(10).toList()
 
         return users
     }
 
     override suspend fun getChats(token: String): List<FormattedChatDC> {
 
-        val usernameByToken = db.getCollection<Token>("token").find(" { \"_id\": \"$token\" } ").toList()[0].username
+        val usernameByToken = db.getCollection<Token>("token").findOne(Token::id eq token)?.username
 
-        val chatsId = db.getCollection<ChatsDC>("users").find("{ \"username\": \"$usernameByToken\" }").toList()[0]
+        val chatsId = db.getCollection<ChatsDC>("users").findOne("{ username: \"$usernameByToken\" }")
 
 
         val chats = mutableListOf<FormattedChatDC>()
 
-        isTrue(chatsId.chats.isNotEmpty()) {
-//                chatsId.chats.fore
+        chatsId?.chats?.isNotEmpty()?.let {
+            isTrue(it) {
 
-            chatsId.chats.forEachSuspend { chatId ->
+                chatsId.chats.forEachSuspend { chatId ->
 
-                val chat = db.getCollection<ChatMainEntity>("chats").find(" { \"_id\" : \"${chatId}\" } ").toList()[0]
-                val companion =
-                    if (chat.firstCompanion.nameUser != usernameByToken) chat.firstCompanion else chat.secondCompanion
-                val image = db.getCollection<UserMainEntity>("users").find(" { \"_id\" : \"${companion.idUser}\" } ")
-                    .toList()[0].image
+                    val chat = db.getCollection<ChatMainEntity>("chats").findOne(ChatMainEntity::idChat eq chatId)
+                    val companion =
+                        if (chat?.firstCompanion?.nameUser != usernameByToken) chat?.firstCompanion!! else chat?.secondCompanion
+                    val image =
+                        db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::idUser eq companion?.idUser)
+                            ?.image
 
-                val formattedItem = FormattedChatDC(
-                    id = chat.idChat,
-                    nameChat = companion.nameUser,
-                    idCompanion = companion.idUser,
-                    image = image
-                )
-                chats.add(formattedItem)
+                    val formattedItem = FormattedChatDC(
+                        id = chat?.idChat!!,
+                        nameChat = companion?.nameUser!!,
+                        idCompanion = companion.idUser,
+                        image = image!!
+                    )
+                    chats.add(formattedItem)
+                }
             }
         }
         return chats
@@ -91,16 +94,12 @@ class UsersDataSourceImpl(
     override suspend fun addRequestToFriend(userSender: UserNameID, idUserReceiver: String) {
 
         val requestsFriend =
-            db.getCollection<RequestFriendDC>("requestsFriend").find("{ \"_id\": \"$idUserReceiver\" } ").toList()
+            db.getCollection<RequestFriendDC>("requestsFriend").findOne(RequestFriendDC::id eq idUserReceiver)
 
-        if (requestsFriend.isNotEmpty()) {
-            if (!requestsFriend[0].requests.contains(userSender)) {
-                val newList = requestsFriend[0].requests.toMutableList()
-                newList.add(userSender)
-                db.getCollection<RequestFriendDC>("requestsFriend").updateOne(
-                    " { \"_id\": \"$idUserReceiver\" } ",
-                    "{ \"${MongoOperator.set}\": { \"requests\" : \"$newList\" }"
-                )
+        if (requestsFriend != null) {
+            if (!requestsFriend.requests.contains(userSender)) {
+                db.getCollection<RequestFriendDC>("requestsFriend")
+                    .updateOne(RequestFriendDC::id eq idUserReceiver, addToSet(RequestFriendDC::requests, userSender))
             }
         } else {
             val document = RequestFriendDC(
@@ -112,25 +111,25 @@ class UsersDataSourceImpl(
     }
 
     override suspend fun getUserByToken(token: String): UserMainEntity {
-        val usernameByToken = db.getCollection<Token>("token").find(" { \"_id\": \"$token\" } ").toList()[0].username
-        val user = db.getCollection<UserMainEntity>("users").find("{ \"username\": \"$usernameByToken\" }").toList()[0]
+        val usernameByToken = db.getCollection<Token>("token").findOne(Token::id eq token)?.username
+        val user = db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::username eq usernameByToken)
 
-        return user
+        return user!!
     }
 
     override suspend fun acceptRequestFriend(userReceiver: UserNameID, userSender: UserNameID) {
         val requestsFriend =
-            db.getCollection<RequestFriendDC>("requestsFriend").find("{ \"_id\": \"${userReceiver.id}\" } ")
+            db.getCollection<RequestFriendDC>("requestsFriend").find(RequestFriendDC::id eq userReceiver.id)
                 .toList()
 
         if (requestsFriend.isNotEmpty()) {
             requestsFriend[0].requests.forEach { userSenderL ->
                 if (userSenderL.id == userSender.id) {
                     val friendCollection = db.getCollection<FriendDC>("friends")
-                    val friendsReceiver = friendCollection.find(" { \"_id\": \"${userReceiver.id}\" } ").toList()
-                    val friendsSender = friendCollection.find(" { \"_id\": \"${userSender.id}\" } ").toList()
+                    val friendsReceiver = friendCollection.findOne(FriendDC::idUser eq userReceiver.id)
+                    val friendsSender = friendCollection.findOne(FriendDC::idUser eq userSender.id)
 
-                    if (friendsReceiver.isNotEmpty()) {
+                    if (friendsReceiver != null) {
 
                         friendCollection.updateOne(
                             FriendDC::idUser eq userReceiver.id,
@@ -162,7 +161,7 @@ class UsersDataSourceImpl(
                             )
                     }
 
-                    if (friendsSender.isNotEmpty()) {
+                    if (friendsSender != null) {
                         friendCollection.updateOne(
                             FriendDC::idUser eq userSender.id,
                             addToSet(FriendDC::friends, userReceiver)
@@ -178,29 +177,89 @@ class UsersDataSourceImpl(
             }
         }
     }
+
+    override suspend fun getFriends(token: String): List<FriendListDC> {
+
+        val userId = getUserByToken(token)
+
+        val friends = db.getCollection<FriendDC>("friends").findOne(FriendDC::idUser eq userId.idUser)
+
+        if (friends != null) {
+            val friendList = mutableListOf<FriendListDC>()
+            friends.friends.forEachSuspend { friendDC ->
+                val user = getUserByUsername(friendDC.username)
+                friendList.add(
+                    FriendListDC(
+                        id = user.id,
+                        username = user.username,
+                        status = user.status,
+                        image = user.image
+                    )
+                )
+            }
+            return friendList
+        } else {
+            return emptyList()
+        }
+    }
+
+    override suspend fun getUserByUsername(username: String): UsersSearch {
+        return db.getCollection<UsersSearch>("users").findOne(UsersSearch::username eq username)!!
+    }
+
+    override suspend fun getRequestsFriends(token: String): List<UserNameID>? {
+        val user = getUserByToken(token)
+        val requestsToFriend = db.getCollection<RequestFriendDC>("requestsFriend").findOne(UserMainEntity::idUser eq user.idUser)
+
+        return requestsToFriend?.requests
+    }
+
+    override suspend fun watchForRequestsFriends(
+        idUser: String,
+        socket: DefaultWebSocketServerSession
+    ) {
+//        val pipeline = listOf(Document("\$match", Document("_id", Document("\$eq", "62333996647f736674632563a"))))
+
+        val requestsToFriend = db.getCollection<RequestFriendDC>("requestsFriend").watch<RequestFriendDC>()
+
+        requestsToFriend.consumeEach { item ->
+            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+                if (item.updateDescription != null) {
+
+                    val updatedFields = item.updateDescription.updatedFields.toJson()
+                    socket.send(Frame.Text("getRequestsFriends$updatedFields"))
+                }else {
+                    val json = item.fullDocument.requests.json
+                    socket.send(Frame.Text("getRequestsFriends$json"))
+                }
+            }
+        }
+
+    }
+
+    override suspend fun watchForFriend(idUser: String, socket: DefaultWebSocketServerSession) {
+        val requestsToFriend = db.getCollection<FriendDC>("friends").watch<FriendDC>()
+//        requestsToFriend.onEach { item ->
+//            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+//                val updatedFields = item.updateDescription.updatedFields.toJson()
+//                socket.send(Frame.Text(updatedFields))
+//            }
+//        }.flowOn(Dispatchers.IO)
+
+        requestsToFriend.consumeEach { item ->
+            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+                if (item.updateDescription != null) {
+                    val updatedFields = item.updateDescription.updatedFields["friends"]?.asArray()?.values.toString()
+                    socket.send(Frame.Text("getFriends$updatedFields"))
+                }else {
+                    val json = item.fullDocument.friends.json
+                    socket.send(Frame.Text("getFriends$json"))
+                }
+            }
+        }
+    }
 }
 
 suspend fun <T> Iterable<T>.forEachSuspend(action: suspend (T) -> Unit): Unit {
     for (element in this) action(element)
 }
-
-@kotlinx.serialization.Serializable
-data class UserNameID(
-//    @BsonId
-    var id: String,
-    var username: String
-)
-
-@kotlinx.serialization.Serializable
-data class RequestFriendDC(
-    @BsonId
-    var id: String = ObjectId().toString(),
-    var requests: List<UserNameID>
-)
-
-@kotlinx.serialization.Serializable
-data class FriendDC(
-    @BsonId
-    var idUser: String,
-    var friends: List<UserNameID>
-)

@@ -1,24 +1,14 @@
 package com.foggyskies.chat.routes
 
+import com.foggyskies.chat.data.model.LoginUserDC
+import com.foggyskies.chat.data.model.RegistrationUserDC
+import com.foggyskies.chat.data.model.UserMainEntity
 import com.foggyskies.chat.room.AuthRoomController
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
-
-@kotlinx.serialization.Serializable
-data class RegistrationUserDC(
-    var username: String,
-    var password: String,
-    var e_mail: String
-)
-
-@kotlinx.serialization.Serializable
-data class LoginUserDC(
-    var username: String,
-    var password: String
-)
 
 fun Route.authRoutes(roomAuthController: AuthRoomController) {
     post("/registration") {

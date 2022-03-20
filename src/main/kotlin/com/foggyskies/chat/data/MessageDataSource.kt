@@ -1,6 +1,7 @@
 package com.foggyskies.chat.data;
 
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
+import kotlinx.coroutines.flow.Flow
 
 interface MessageDataSource {
 
