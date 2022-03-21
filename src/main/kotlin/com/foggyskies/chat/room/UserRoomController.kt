@@ -36,15 +36,15 @@ class UserRoomController(
         return usersDataSource.getUserByToken(token)
     }
 
-    suspend fun acceptRequestFriend(userReceiver: UserNameID, userSender: UserNameID){
-        usersDataSource.acceptRequestFriend(userReceiver, userSender)
+    suspend fun acceptRequestFriend(idUserSender: UserNameID, idUserReceiver: String){
+        usersDataSource.acceptRequestFriend(idUserSender, idUserReceiver)
     }
 
     suspend fun getFriends(token: String): List<FriendListDC>{
         return usersDataSource.getFriends(token)
     }
 
-    suspend fun getRequestsFriends(token: String): List<UserNameID>? {
+    suspend fun getRequestsFriends(token: String): List<UsersSearch> {
         return usersDataSource.getRequestsFriends(token)
     }
 
@@ -54,5 +54,9 @@ class UserRoomController(
 
     suspend fun watchForFriend(idUser: String, socket: DefaultWebSocketServerSession){
         usersDataSource.watchForFriend(idUser, socket)
+    }
+
+    suspend fun logOut(token: String){
+        usersDataSource.logOut(token)
     }
 }

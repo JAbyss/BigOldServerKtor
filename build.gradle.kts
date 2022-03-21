@@ -9,21 +9,25 @@ val koin_version: String by project
 plugins {
     application
     kotlin("jvm") version "1.5.31"
-                id("org.jetbrains.kotlin.plugin.serialization") version "1.6.0"
+//    id("org.jetbrains.kotlin.jvm") version "1.5.31"
+    id("org.jetbrains.kotlin.plugin.serialization") version "1.6.0"
     kotlin("kapt") version "1.6.10"
+    id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
 group = "com.foggyskies"
 version = "0.0.1"
 application {
-    mainClass.set("com.foggyskies.ApplicationKt")
-
-    val isDevelopment: Boolean = project.ext.has("development")
-    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
+//    mainClass.set("com.foggyskies.ApplicationKt")
+    mainClass.set("io.ktor.server.netty.EngineMain")
+    project.setProperty("mainClassName", mainClass.get())
+//    val isDevelopment: Boolean = project.ext.has("development")
+//    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
 repositories {
     mavenCentral()
+    gradlePluginPortal()
     maven { url = uri("https://maven.pkg.jetbrains.space/public/p/ktor/eap") }
 }
 
@@ -47,4 +51,20 @@ dependencies {
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
 
     kapt("org.litote.kmongo:kmongo-annotation-processor:$kmongo_version")
+}
+
+//tasks{
+//    shadowJar {
+//        manifest {
+//            attributes(Pair("Main-Class", "com.foggyskies.ApplicationKt"))
+//        }
+//    }
+//}
+
+tasks.withType<com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar> {
+    manifest {
+        attributes(
+            "Main-Class" to application.mainClass.get()
+        )
+    }
 }

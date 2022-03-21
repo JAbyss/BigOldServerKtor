@@ -6,11 +6,6 @@ import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.flowOn
-import kotlinx.coroutines.flow.onEach
-import org.bson.BsonString
-import org.bson.Document
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
 
@@ -51,7 +46,7 @@ class UsersDataSourceImpl(
 
     override suspend fun getUsersByUsername(username: String): List<UsersSearch> {
         val users = db.getCollection<UsersSearch>("users")
-            .find(" { \"username\": { ${MongoOperator.regex}: '^$username.+', ${MongoOperator.options}: 'i' } } ")
+            .find(" { \"username\": { ${MongoOperator.regex}: '^$username.+|$username', ${MongoOperator.options}: 'i' } } ")
             .limit(10).toList()
 
         return users
@@ -117,23 +112,31 @@ class UsersDataSourceImpl(
         return user!!
     }
 
-    override suspend fun acceptRequestFriend(userReceiver: UserNameID, userSender: UserNameID) {
+    override suspend fun acceptRequestFriend(userReceiver: UserNameID, idUserSender: String) {
         val requestsFriend =
-            db.getCollection<RequestFriendDC>("requestsFriend").find(RequestFriendDC::id eq userReceiver.id)
-                .toList()
+            db.getCollection<RequestFriendDC>("requestsFriend").findOne(RequestFriendDC::id eq userReceiver.id)
 
-        if (requestsFriend.isNotEmpty()) {
-            requestsFriend[0].requests.forEach { userSenderL ->
-                if (userSenderL.id == userSender.id) {
+
+        if (requestsFriend != null) {
+            requestsFriend.requests.forEach { userSenderL ->
+                if (userSenderL.id == idUserSender) {
                     val friendCollection = db.getCollection<FriendDC>("friends")
+
+                    val userSender = db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::idUser eq idUserSender)!!
+
+                    val formattedUserSender = UserNameID(
+                        id = userSender.idUser,
+                        username = userSender.username
+                    )
+
                     val friendsReceiver = friendCollection.findOne(FriendDC::idUser eq userReceiver.id)
-                    val friendsSender = friendCollection.findOne(FriendDC::idUser eq userSender.id)
+                    val friendsSender = friendCollection.findOne(FriendDC::idUser eq idUserSender)
 
                     if (friendsReceiver != null) {
 
                         friendCollection.updateOne(
                             FriendDC::idUser eq userReceiver.id,
-                            addToSet(FriendDC::friends, userSender)
+                            addToSet(FriendDC::friends, formattedUserSender)
                         )
 
                         val requestsFriendCollection = db.getCollection<RequestFriendDC>("requestsFriend")
@@ -142,33 +145,32 @@ class UsersDataSourceImpl(
                         if (requestsFriend != null)
                             requestsFriendCollection.updateOne(
                                 RequestFriendDC::id eq userReceiver.id,
-                                pull(RequestFriendDC::requests, userSender)
+                                pull(RequestFriendDC::requests, formattedUserSender)
                             )
                     } else {
                         val document = FriendDC(
                             idUser = userReceiver.id,
-                            friends = listOf(userSender)
+                            friends = listOf(formattedUserSender)
                         )
                         friendCollection.insertOne(document)
                         val requestsFriendCollection = db.getCollection<RequestFriendDC>("requestsFriend")
                         val requestsFriend =
                             requestsFriendCollection.findOne(RequestFriendDC::id eq userReceiver.id)
-
                         if (requestsFriend != null)
                             requestsFriendCollection.updateOne(
                                 RequestFriendDC::id eq userReceiver.id,
-                                pull(RequestFriendDC::requests, userSender)
+                                pull(RequestFriendDC::requests, formattedUserSender)
                             )
                     }
 
                     if (friendsSender != null) {
                         friendCollection.updateOne(
-                            FriendDC::idUser eq userSender.id,
+                            FriendDC::idUser eq formattedUserSender.id,
                             addToSet(FriendDC::friends, userReceiver)
                         )
                     } else {
                         val document = FriendDC(
-                            idUser = userSender.id,
+                            idUser = formattedUserSender.id,
                             friends = listOf(userReceiver)
                         )
                         friendCollection.insertOne(document)
@@ -207,11 +209,23 @@ class UsersDataSourceImpl(
         return db.getCollection<UsersSearch>("users").findOne(UsersSearch::username eq username)!!
     }
 
-    override suspend fun getRequestsFriends(token: String): List<UserNameID>? {
+    override suspend fun getRequestsFriends(token: String): List<UsersSearch> {
         val user = getUserByToken(token)
-        val requestsToFriend = db.getCollection<RequestFriendDC>("requestsFriend").findOne(UserMainEntity::idUser eq user.idUser)
+        val requestsToFriend = db.getCollection<RequestFriendDC>("requestsFriend").findOne(UserMainEntity::idUser eq user.idUser)?.requests
+        val listFormattedRequests = mutableListOf<UsersSearch>()
 
-        return requestsToFriend?.requests
+        requestsToFriend?.forEach { request ->
+            val user = db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::idUser eq request.id)!!
+            val formattedUser = UsersSearch(
+                id = user.idUser,
+                username = user.username,
+                image = user.image,
+                status = user.status
+            )
+            listFormattedRequests.add(formattedUser)
+        }
+
+        return listFormattedRequests.toList()
     }
 
     override suspend fun watchForRequestsFriends(
@@ -257,6 +271,10 @@ class UsersDataSourceImpl(
                 }
             }
         }
+    }
+
+    override suspend fun logOut(token: String) {
+        db.getCollection<Token>("token").deleteOne(Token::id eq token)
     }
 }
 

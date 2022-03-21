@@ -6,5 +6,6 @@ import org.bson.types.ObjectId
 data class Token(
     @BsonId
     var id: String = ObjectId().toString(),
+    var idUser: String,
     var username: String
 )

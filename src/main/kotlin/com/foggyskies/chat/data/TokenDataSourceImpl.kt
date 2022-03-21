@@ -9,7 +9,7 @@ class TokenDataSourceImpl(
 ): TokenDataSource {
 
     override suspend fun checkOnExistToken(token: String): Boolean {
-        val isTokenExist = db.getCollection<Token>("token").find(Token::id eq token).toList().isNotEmpty()
+        val isTokenExist = db.getCollection<Token>("tokens").find(Token::id eq token).toList().isNotEmpty()
 
         return isTokenExist
     }

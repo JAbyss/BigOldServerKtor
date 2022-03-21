@@ -31,19 +31,20 @@ class AuthDataSourceImpl(
     }
 
     override suspend fun checkOnExistToken(username: String): Boolean {
-        val isTokenExist = db.getCollection<Token>("token").find(Token::username eq username).toList().isNotEmpty()
+        val isTokenExist = db.getCollection<Token>("tokens").find(Token::username eq username).toList().isNotEmpty()
 
         return isTokenExist
     }
 
     override suspend fun createToken(username: String): String {
         val token = ObjectId().toString()
-        db.getCollection<Token>("token").insertOne(Token(id = token, username = username))
+        val idUser = db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::username eq username)?.idUser!!
+        db.getCollection<Token>("tokens").insertOne(Token(id = token, username = username, idUser = idUser))
         return  token
     }
 
     override suspend fun getToken(username: String): String {
-        val token =  db.getCollection<Token>("token").find(Token::username eq username).toList()[0]
+        val token =  db.getCollection<Token>("tokens").find(Token::username eq username).toList()[0]
         return token.id
     }
 

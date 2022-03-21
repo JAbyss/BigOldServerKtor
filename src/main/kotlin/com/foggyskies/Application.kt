@@ -1,6 +1,8 @@
 package com.foggyskies
 
 import com.foggyskies.chat.data.*
+import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.newroom.UserRoutController
 import com.foggyskies.chat.room.AuthRoomController
 import com.foggyskies.chat.room.CreateChatRoomController
 import com.foggyskies.chat.room.MessageRoomController
@@ -11,6 +13,7 @@ import com.foggyskies.plugin.configureSockets
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.serialization.*
+import kotlinx.serialization.json.Json
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 import org.koin.dsl.module
@@ -45,11 +48,10 @@ fun Application.module() {
         modules(mainModule)
     }
     install(ContentNegotiation) {
-//        json(Json {
-//            prettyPrint = true
-//            isLenient = true
-//        })
-        json()
+        json(Json {
+            prettyPrint = true
+            isLenient = true
+        })
     }
     configureSockets()
     configureRouting()
@@ -61,6 +63,12 @@ val mainModule = module {
         KMongo.createClient()
             .coroutine
             .getDatabase("petapp_db")
+    }
+    single {
+        AllCollectionImpl(get())
+    }
+    single {
+        UserRoutController(get(),get())
     }
     single<AuthDataSource> {
         AuthDataSourceImpl(get())

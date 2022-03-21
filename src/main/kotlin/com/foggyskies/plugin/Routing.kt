@@ -9,10 +9,10 @@ import org.koin.ktor.ext.inject
 
 fun Application.configureRouting() {
     val roomAuthController by inject<AuthRoomController>()
-    val roomUserController by inject<UserRoomController>()
+//    val roomUserController by inject<UserRoomController>()
 
     install(Routing) {
-        usersRoutes(roomUserController)
+        usersRoutes()
         authRoutes(roomAuthController)
         createChatRoutes()
         chatSessionRoutes()

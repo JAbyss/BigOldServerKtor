@@ -8,6 +8,10 @@ import java.io.File
 
 fun Route.photoRouting() {
 
+    get("/hi") {
+        call.respond("Hello World")
+    }
+
     get("/photo{name}") {
         val name = call.parameters["name"]
         val file = File("photos/$name")

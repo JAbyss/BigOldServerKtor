@@ -20,15 +20,17 @@ interface UsersDataSource {
 
     suspend fun getUserByToken(token: String): UserMainEntity
 
-    suspend fun acceptRequestFriend(userReceiver: UserNameID, userSender: UserNameID)
+    suspend fun acceptRequestFriend(userSender: UserNameID, idUserReceiver: String)
 
     suspend fun getFriends(token: String): List<FriendListDC>
 
     suspend fun getUserByUsername(username: String): UsersSearch
 
-    suspend fun getRequestsFriends(token: String): List<UserNameID>?
+    suspend fun getRequestsFriends(token: String): List<UsersSearch>
 
     suspend fun watchForRequestsFriends(idUser: String, socket: DefaultWebSocketServerSession)
 
     suspend fun watchForFriend(idUser: String, socket: DefaultWebSocketServerSession)
+
+    suspend fun logOut(token: String)
 }
