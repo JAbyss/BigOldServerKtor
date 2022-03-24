@@ -11,6 +11,7 @@ import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
+import io.ktor.util.collections.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.consumeEach
@@ -18,81 +19,99 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
 
+private var sessionsMainSockets = ConcurrentList<String>()
+
 fun Route.usersRoutes() {
 
     val routController by inject<UserRoutController>()
     fun createMainSocket(idUser: String) {
-        webSocket("/mainSocket/$idUser") {
-            val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
-            val isTokenExist = routController.checkOnExistToken(token.toString())
+        if (!sessionsMainSockets.contains(idUser)) {
+            sessionsMainSockets.add(idUser)
+            webSocket("/mainSocket/$idUser") {
+                val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+                val isTokenExist = routController.checkOnExistToken(token.toString())
 
-            val map_actions = mapOf(
-                "getFriends" to suspend { "getFriends${Json.encodeToString(routController.getFriends(token.toString()))}" },
-                "getChats" to suspend { "getFriends${Json.encodeToString(routController.getChats(token.toString()))}" },
-                "getRequestsFriends" to suspend {
-                    "getRequestsFriends${
-                        Json.encodeToString(
-                            routController.getRequestsFriends(
-                                token.toString()
-                            )
-                        )
-                    }"
-                },
-            )
-            val map_action_unit = mapOf(
-                "logOut" to suspend { routController.logOut(token.toString()) },
-//            "acceptRequestFriend" to suspend { roomUserController.acceptRequestFriend() }
-            )
-
-
-            val user = routController.getUserByToken(token.toString())
-
-            if (isTokenExist) {
-                val session = call.sessions.get<ChatSession>()
-                if (session == null) {
-                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
-                    return@webSocket
-                }
-                try {
-                    async {
-                        routController.watchForFriend(idUser, this@webSocket)
-                    }
-                    async {
-                        routController.watchForRequestsFriends(idUser, this@webSocket)
-                    }
-
-                    incoming.consumeEach { frame ->
-                        if (frame is Frame.Text) {
-                            val incomingData = frame.readText()
-                            val regex = ".+(?=\\|)".toRegex()
-                            val action = regex.find(incomingData)?.value
-
-                            if (map_actions.containsKey(action)) {
-                                val friends = map_actions[action]?.invoke()
-                                if (friends != null) {
-                                    send(friends)
-                                }
-                            } else if (map_action_unit.containsKey(action)){
-                                map_action_unit[action]?.invoke()
-                            } else if (action == "acceptRequestFriend"){
-                                val idUserReceiver = incomingData.replace("$action|", "")
-                                val userSender = UserNameID(
-                                    id = user.idUser,
-                                    username = user.username
+                val map_actions = mapOf(
+                    "getFriends" to suspend { "getFriends|${Json.encodeToString(routController.getFriends(token.toString()))}" },
+                    "getChats" to suspend { "getFriends|${Json.encodeToString(routController.getChats(token.toString()))}" },
+                    "getRequestsFriends" to suspend {
+                        "getRequestsFriends|${
+                            Json.encodeToString(
+                                routController.getRequestsFriends(
+                                    token.toString()
                                 )
-                                routController.acceptRequestFriend(userSender, idUserReceiver)
-                            } else if (action == "addFriend"){
-                                val idReceiver = incomingData.replace("$action|", "")
-                                routController.addRequestToFriend(UserNameID(id = user.idUser, username = user.username), idReceiver)
+                            )
+                        }"
+                    },
+                    "getChats" to suspend { "getChats|${Json.encodeToString(routController.getChats(token.toString()))}"
+                    }
+                )
+                val map_action_unit = mapOf(
+                    "logOut" to suspend { routController.logOut(token.toString()) },
+//            "acceptRequestFriend" to suspend { roomUserController.acceptRequestFriend() }
+                )
+
+
+
+                if (isTokenExist) {
+                    routController.setStatusUser(idUser, "В сети")
+                    val user = routController.getUserByToken(token.toString())
+                    val session = call.sessions.get<ChatSession>()
+                    if (session == null) {
+                        routController.setStatusUser(idUser, "Не в сети")
+                        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
+                        return@webSocket
+                    }
+                    try {
+                        async {
+                            routController.watchForFriend(idUser, this@webSocket)
+                        }
+                        async {
+                            routController.watchForRequestsFriends(idUser, this@webSocket)
+                        }
+
+                        incoming.consumeEach { frame ->
+                            if (frame is Frame.Text) {
+                                val incomingData = frame.readText()
+                                val regex = ".+(?=\\|)".toRegex()
+                                val action = regex.find(incomingData)?.value
+
+                                if (map_actions.containsKey(action)) {
+                                    val friends = map_actions[action]?.invoke()
+                                    if (friends != null) {
+                                        send(friends)
+                                    }
+                                } else if (map_action_unit.containsKey(action)) {
+                                    map_action_unit[action]?.invoke()
+                                } else if (action == "acceptRequestFriend") {
+                                    val idUserReceiver = incomingData.replace("$action|", "")
+                                    val userSender = UserNameID(
+                                        id = user.idUser,
+                                        username = user.username
+                                    )
+                                    routController.acceptRequestFriend(userSender, idUserReceiver)
+                                } else if (action == "addFriend") {
+                                    val idReceiver = incomingData.replace("$action|", "")
+                                    routController.addRequestToFriend(
+                                        UserNameID(
+                                            id = user.idUser,
+                                            username = user.username
+                                        ), idReceiver
+                                    )
+                                }
                             }
                         }
+                    } catch (e: Exception) {
+                        println(e)
+                    } finally {
+                        routController.setStatusUser(idUser, "Не в сети")
+                        sessionsMainSockets.remove(idUser)
                     }
-                } catch (e: Exception) {
-                    println(e)
+                } else {
+                    routController.setStatusUser(idUser, "Не в сети")
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
+                    return@webSocket
                 }
-            } else {
-                close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
-                return@webSocket
             }
         }
     }
@@ -118,6 +137,8 @@ fun Route.usersRoutes() {
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         if (isTokenExist) {
+            val user = routController.getUserByToken(token.toString())
+
             val session = call.sessions.get<ChatSession>()
             if (session == null) {
                 close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
@@ -127,7 +148,7 @@ fun Route.usersRoutes() {
                 incoming.consumeEach { frame ->
                     if (frame is Frame.Text) {
                         if (frame.readText().length >= 3) {
-                            val users = routController.searchUsers(frame.readText())
+                            val users = routController.searchUsers(idUser = user.idUser, frame.readText())
                             if (users.isNotEmpty()) {
                                 val parsedString = Json.encodeToString(users)
                                 send(parsedString)

@@ -1,14 +1,14 @@
-package com.foggyskies.chat.data;
+package com.foggyskies.chat.datanew
 
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
-import kotlinx.coroutines.flow.Flow
 
-interface MessageDataSource {
+interface MessagesCollectionDataSource {
 
     suspend fun insertOne(idChat: String, message: ChatMessage)
 
-    suspend fun getAllMessage(idChat: String) : List<ChatMessage>
+    suspend fun getAllMessages(idChat: String) : List<ChatMessage>
 
     suspend fun getFiftyMessage(idChat: String) : List<ChatMessage>
 
+    suspend fun getLastMessage(idChat: String): String
 }

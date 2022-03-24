@@ -1,6 +1,5 @@
 package com.foggyskies.chat.datanew
 
-import com.foggyskies.chat.data.FormattedChatDC
 import com.foggyskies.chat.data.model.RegistrationUserDC
 import com.foggyskies.chat.data.model.UserMainEntity
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
@@ -17,5 +16,15 @@ interface UsersCollectionDataSource {
 
     suspend fun createUser(registrationUserDC: RegistrationUserDC)
 
-    suspend fun searchUsers(username: String): List<UsersSearch>
+    suspend fun searchUsers(idUser: String, username: String): List<UsersSearch>
+
+    suspend fun addChatToUsersByIdUsers(idUserFirst: String, idUserSecond: String, idChat: String)
+
+    suspend fun setStatusUser(idUser: String, status: String)
+
+    suspend fun checkOnExistEmail(e_mail: String): Boolean
+
+    suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean
+
+    suspend fun checkOnExistUser(username: String): Boolean
 }

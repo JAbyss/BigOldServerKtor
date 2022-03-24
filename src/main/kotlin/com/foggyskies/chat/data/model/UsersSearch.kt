@@ -8,5 +8,7 @@ data class UsersSearch(
     var id: String,
     var username: String,
     var image: String,
-    var status: String
+    var status: String,
+    var isFriend: Boolean,
+    var awaitAccept: Boolean
 )

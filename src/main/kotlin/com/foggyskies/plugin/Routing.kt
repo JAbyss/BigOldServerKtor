@@ -1,22 +1,19 @@
 package com.foggyskies.plugin
 
 import com.foggyskies.chat.routes.*
-import com.foggyskies.chat.room.AuthRoomController
-import com.foggyskies.chat.room.UserRoomController
 import io.ktor.application.*
 import io.ktor.routing.*
-import org.koin.ktor.ext.inject
 
 fun Application.configureRouting() {
-    val roomAuthController by inject<AuthRoomController>()
 //    val roomUserController by inject<UserRoomController>()
 
     install(Routing) {
         usersRoutes()
-        authRoutes(roomAuthController)
+        authRoutes()
         createChatRoutes()
         chatSessionRoutes()
-        chatListRoutes()
+        notificationRoutes()
+//        chatListRoutes()
         photoRouting()
     }
 }

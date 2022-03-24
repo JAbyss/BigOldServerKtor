@@ -7,5 +7,4 @@ import org.litote.kmongo.Data
 data class ChatUserEntity(
     var idUser: String,
     var nameUser: String
-
 )

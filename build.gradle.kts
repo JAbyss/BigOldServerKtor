@@ -1,5 +1,10 @@
 import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
 
+/**
+ *      COMMAND FOR BUILD!!
+ *      ./gradlew shadowJar
+ */
+
 val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
@@ -15,11 +20,12 @@ plugins {
     id("com.github.johnrengelman.shadow") version "5.2.0"
 }
 
-group = "com.foggyskies"
-version = "0.0.1"
+group = "ktor-server"
+version = "1.0.1"
 application {
 //    mainClass.set("com.foggyskies.ApplicationKt")
     mainClass.set("io.ktor.server.netty.EngineMain")
+//    mainClass.set("ktor-server-petaap")
     project.setProperty("mainClassName", mainClass.get())
 //    val isDevelopment: Boolean = project.ext.has("development")
 //    applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")

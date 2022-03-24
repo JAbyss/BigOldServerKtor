@@ -2,11 +2,7 @@ package com.foggyskies
 
 import com.foggyskies.chat.data.*
 import com.foggyskies.chat.datanew.AllCollectionImpl
-import com.foggyskies.chat.newroom.UserRoutController
-import com.foggyskies.chat.room.AuthRoomController
-import com.foggyskies.chat.room.CreateChatRoomController
-import com.foggyskies.chat.room.MessageRoomController
-import com.foggyskies.chat.room.UserRoomController
+import com.foggyskies.chat.newroom.*
 import com.foggyskies.plugin.configureRouting
 import com.foggyskies.plugin.configureSecurity
 import com.foggyskies.plugin.configureSockets
@@ -70,31 +66,22 @@ val mainModule = module {
     single {
         UserRoutController(get(),get())
     }
-    single<AuthDataSource> {
-        AuthDataSourceImpl(get())
-    }
-    single<UsersDataSource> {
-        UsersDataSourceImpl(get())
-    }
-    single<CreateChatDataSource> {
-        CreateChatDataSourceImpl(get())
-    }
-    single<TokenDataSource> {
-        TokenDataSourceImpl(get())
-    }
-    single<MessageDataSource> {
-        MessageDataSourceImpl(get())
+    single {
+        CreateChatRoutController(get(), get())
     }
     single {
-        AuthRoomController(get())
+        NotifyRoutController(get(),get())
     }
     single {
-        UserRoomController(get())
+        MessagesRoutController(get(), get())
     }
     single {
-        CreateChatRoomController(get(), get())
+        AuthRoutController(get(),get())
     }
-    single {
-        MessageRoomController(get())
-    }
+//    single<AuthDataSource> {
+//        AuthDataSourceImpl(get())
+//    }
+//    single {
+//        AuthRoomController(get())
+//    }
 }

@@ -1,7 +1,7 @@
 package com.foggyskies.chat.routes
 
 import com.foggyskies.ChatSession
-import com.foggyskies.chat.room.MessageRoomController
+import com.foggyskies.chat.newroom.MessagesRoutController
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.application.*
 import io.ktor.http.*
@@ -15,17 +15,17 @@ import kotlinx.coroutines.channels.consumeEach
 import org.koin.ktor.ext.inject
 import java.util.concurrent.ConcurrentHashMap
 
-var sessionsChat = ConcurrentList<String>()
+private var sessionsChat = ConcurrentList<String>()
 
 fun Route.chatSessionRoutes() {
     route("/subscribes") {
-        val roomController by inject<MessageRoomController>()
+        val routController by inject<MessagesRoutController>()
         fun createSocket(idChat: String, sessionsChat: ConcurrentList<String>) {
             if (!sessionsChat.contains(idChat)) {
                 sessionsChat.add(idChat)
                 val members = ConcurrentHashMap<String, Member>()
                 webSocket("/$idChat{username}") {
-                    roomController.chatId = idChat
+                    routController.chatId = idChat
                     val session = call.sessions.get<ChatSession>()
                     if (session == null) {
                         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
@@ -33,7 +33,7 @@ fun Route.chatSessionRoutes() {
                         return@webSocket
                     }
                     try {
-                        roomController.onJoin(
+                        routController.onJoin(
                             username = session.username,
                             sessionId = session.sessionID,
                             socket = this,
@@ -41,7 +41,7 @@ fun Route.chatSessionRoutes() {
                         )
                         incoming.consumeEach { frame ->
                             if (frame is Frame.Text) {
-                                roomController.sendMessage(
+                                routController.sendMessage(
                                     senderUsername = session.username,
                                     message = frame.readText(),
                                     members = members,
@@ -53,13 +53,6 @@ fun Route.chatSessionRoutes() {
                         println(e)
                     }
                     tryDisconnect(members = members, username = session.username)
-//                    if (members.size == 0) {
-//                        sessionsChat.remove(chatId)
-//                        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
-//                        flush()
-//                        cancel()
-//                        return@webSocket
-//                    }
                 }
             }
         }
