@@ -12,6 +12,7 @@ data class NotificationDocument(
 @kotlinx.serialization.Serializable
 data class Notification(
     var id: String,
+    var idUser: String,
     var title: String,
     var description: String,
     var image: String,

@@ -11,6 +11,8 @@ interface TokenCollectionDataSource {
 
     suspend fun checkOnExistToken(token: String): Boolean
 
+    suspend fun checkOnExistTokenByUsername(username: String): Boolean
+
     suspend fun getTokenByToken(token: String): Token
 
 //    suspend fun delTokenByIdUser(idUser: String)

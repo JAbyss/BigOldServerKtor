@@ -7,18 +7,16 @@ import com.foggyskies.chat.extendfun.forEachSuspend
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import com.mongodb.client.model.changestream.FullDocument
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
 import org.bson.types.ObjectId
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.coroutine.insertOne
-import kotlin.streams.toList
 
 class AllCollectionImpl(
     private val db: CoroutineDatabase
@@ -26,7 +24,6 @@ class AllCollectionImpl(
     RequestsFriendsCollectionDataSource, TokenCollectionDataSource, MessagesCollectionDataSource,
     NotifyCollectionDataSource {
     override suspend fun checkOnExistChatByIdUsers(idUserFirst: String, idUserSecond: String): String {
-
         val idChat = db.getCollection<ChatMainEntity>("chats").findOne(
             and(
                 or(
@@ -39,7 +36,6 @@ class AllCollectionImpl(
                 )
             )
         )?.idChat
-
         return idChat ?: ""
     }
 
@@ -219,6 +215,10 @@ class AllCollectionImpl(
         return db.getCollection<Token>("tokens").findOne(Token::id eq token) != null
     }
 
+    override suspend fun checkOnExistTokenByUsername(username: String): Boolean {
+        return db.getCollection<Token>("tokens").findOne(Token::username eq username) != null
+    }
+
     override suspend fun getTokenByToken(token: String): Token {
         return db.getCollection<Token>("tokens").findOneById(token)!!
     }
@@ -314,6 +314,10 @@ class AllCollectionImpl(
         return db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::username eq username) != null
     }
 
+    override suspend fun getStatusByIdUser(idUser: String): String {
+        return db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::idUser eq idUser)?.status!!
+    }
+
     override suspend fun insertOne(idChat: String, message: ChatMessage) {
         db.getCollection<ChatMessage>("messages-$idChat").insertOne(message)
     }
@@ -323,7 +327,8 @@ class AllCollectionImpl(
     }
 
     override suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
-        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: 1 }".bson).limit(50).toList()
+        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(50)
+            .toList().reversed()
     }
 
     override suspend fun getLastMessage(idChat: String): String {
@@ -331,36 +336,129 @@ class AllCollectionImpl(
             .first()?.message ?: ""
     }
 
+    override suspend fun checkOnExistNotificationDocument(idReceiver: String): Boolean {
+        return db.getCollection<NotificationDocument>("notifications")
+            .findOne(NotificationDocument::id eq idReceiver) != null
+    }
+
+    override suspend fun createNotificationDocument(idReceiver: String, notification: Notification) {
+        db.getCollection<NotificationDocument>("notifications")
+            .insertOne(NotificationDocument(idReceiver, listOf(notification)))
+    }
+
+    override suspend fun addNotification(idReceiver: String, notification: Notification) {
+        db.getCollection<NotificationDocument>("notifications").findOneAndUpdate(
+            NotificationDocument::id eq idReceiver,
+            addToSet(NotificationDocument::notifications, notification)
+        )
+    }
+
     override suspend fun getNotification(id: String): Notification? {
         return db.getCollection<Notification>("notification").findOne(Notification::id eq id)
     }
 
     override suspend fun watchForNotification(idUser: String, socket: DefaultWebSocketServerSession) {
-        val watcher = db.getCollection<NotificationDocument>("notifications")
-            .watch<NotificationDocument>()
+        val isExist = checkOnExistNotificationDocument(idUser)
+        if (!isExist) {
+            val item = NotificationDocument(
+                id = idUser,
+                notifications = emptyList()
+            )
+            db.getCollection<NotificationDocument>("notifications").insertOne(item)
+        } else {
+            val watcher = db.getCollection<NotificationDocument>("notifications")
+                .watch<NotificationDocument>()
 
-        val oldMutableList = mutableListOf<Notification>()
-        println("Срабатываю 1 раз!!")
-        oldMutableList.addAll(db.getCollection<NotificationDocument>("notifications").findOne(NotificationDocument::id eq "63cf0a3e88c4a08c2842c08")?.notifications!!)
+            val oldMutableList = mutableListOf<Notification>()
+            println("Срабатываю 1 раз!!")
+            oldMutableList.addAll(
+                db.getCollection<NotificationDocument>("notifications")
+                    .findOne(NotificationDocument::id eq idUser)?.notifications!!
+            )
 
-        watcher.consumeEach { item ->
-            if ((item.documentKey["_id"]?.asString())?.value.equals("63cf0a3e88c4a08c2842c08")) {
-                if (item.updateDescription != null) {
-                    val updatedFields =
-                        Json.decodeFromString<List<UserNameID>>(item.updateDescription.updatedFields["notifications"]?.asArray()?.values.toString())
-                    println(updatedFields)
-                } else {
-                    val json = Json.decodeFromString<List<Notification>>(item.fullDocument.notifications.json)
-                    if (json.size > oldMutableList.size){
-                        json.forEach { notification ->
-                            if (!oldMutableList.contains(notification)){
-                                val jjson = Json.encodeToString(notification)
-                                socket.send(jjson)
+            watcher.consumeEach { item ->
+                if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+                    if (item.updateDescription != null) {
+                        val updatedFields =
+                            Json.decodeFromString<List<Notification>>(item.updateDescription.updatedFields["notifications"]?.asArray()?.values.toString())
+                        if (updatedFields.isEmpty())
+                            oldMutableList.clear()
+                        if (updatedFields.size > oldMutableList.size) {
+                            updatedFields.forEach { notification ->
+                                if (!oldMutableList.contains(notification)) {
+                                    oldMutableList.add(notification)
+                                    val jjson = Json.encodeToString(notification)
+                                    println("ПЕРВЫЙ ПУНКТ $updatedFields")
+                                    socket.send(jjson)
+                                }
+                            }
+                        }
+                    } else {
+                        val json = Json.decodeFromString<List<Notification>>(item.fullDocument.notifications.json)
+                        if (json.isEmpty())
+                            oldMutableList.clear()
+                        if (json.size > oldMutableList.size) {
+                            json.forEach { notification ->
+                                if (!oldMutableList.contains(notification)) {
+                                    oldMutableList.add(notification)
+                                    val jjson = Json.encodeToString(notification)
+                                    println("ВТОРОЙ ПУНКТ $jjson")
+                                    socket.send(jjson)
+                                }
                             }
                         }
                     }
-                    println(json)
-//                    socket.send(json.json)
+                }
+            }
+        }
+    }
+
+    override suspend fun deleteAllSentNotifications(idUser: String) {
+        db.getCollection<NotificationDocument>("notifications").findOneAndUpdate(
+            NotificationDocument::id eq idUser,
+            setValue(NotificationDocument::notifications, emptyList())
+        )
+    }
+
+    override suspend fun checkOnExistInternalNotificationDocument(idReceiver: String): Boolean {
+        return db.getCollection<NotificationDocument>("internal_notifications")
+            .findOne(NotificationDocument::id eq idReceiver) != null
+    }
+
+    override suspend fun createInternalNotificationDocument(idReceiver: String, notification: Notification) {
+        db.getCollection<NotificationDocument>("internal_notifications")
+            .insertOne(NotificationDocument(idReceiver, listOf(notification)))
+    }
+
+    override suspend fun addInternalNotification(idReceiver: String, notification: Notification) {
+        db.getCollection<NotificationDocument>("internal_notifications").findOneAndUpdate(
+            NotificationDocument::id eq idReceiver,
+            addToSet(NotificationDocument::notifications, notification)
+        )
+    }
+
+    override suspend fun watchForInternalNotifications(idUser: String, socket: DefaultWebSocketServerSession) {
+
+        val watcher = db.getCollection<NotificationDocument>("internal_notifications")
+            .watch<NotificationDocument>()
+
+        watcher.consumeEach { item ->
+            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+                if (item.operationType.value != "replace") {
+                    if (item.updateDescription != null) {
+                        println("Первое")
+                        val json = item.updateDescription.updatedFields["notifications"]?.asArray()?.last()?.json!!
+                        val item = Json.decodeFromString<Notification>(json)
+                        db.getCollection<NotificationDocument>("internal_notifications").findOneAndUpdate(
+                            NotificationDocument::id eq idUser,
+                            pull(NotificationDocument::notifications, item)
+                        )
+                        socket.send("getInternalNotification|$json")
+                    } else {
+                        println("Второе")
+                        val json = item.fullDocument.notifications[0].json
+                        socket.send("getInternalNotification|$json")
+                    }
                 }
             }
         }

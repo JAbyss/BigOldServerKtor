@@ -47,13 +47,14 @@ fun Route.authRoutes() {
             val user = routController.getUserByUsername(params.username)
             if (isCorrectPassword) {
                 var token = ""
-                val isTokenExist = routController.checkOnExistToken(params.username)
+                val isTokenExist = routController.checkOnExistTokenByUsername(params.username)
                 if (!isTokenExist) {
                     token = routController.createToken(user.toUserNameID()).id
+                    println("Новый токен создан")
                     call.respond(HttpStatusCode.Created, token)
                 } else {
-
                     token = routController.getToken(params.username).id
+                    println("Старый токен получен")
                     call.respond(HttpStatusCode.OK, token)
                 }
             } else

@@ -165,6 +165,10 @@ class UserRoutController(
         allCollectionImpl.watchForFriend(idUser, socket)
     }
 
+    suspend fun watchForInternalNotifications(idUser: String, socket: DefaultWebSocketServerSession) {
+        allCollectionImpl.watchForInternalNotifications(idUser, socket)
+    }
+
     suspend fun logOut(token: String) {
         allCollectionImpl.delTokenByTokenId(token)
     }
@@ -175,5 +179,10 @@ class UserRoutController(
 
     suspend fun setStatusUser(idUser: String, status: String){
         allCollectionImpl.setStatusUser(idUser, status)
+    }
+
+    suspend fun deleteAllSentNotifications(idUser: String){
+        println("Я ПОПАЛ СЮДА")
+        allCollectionImpl.deleteAllSentNotifications(idUser)
     }
 }

@@ -24,8 +24,8 @@ class AuthRoutController(
         allCollectionImpl.createUser(user)
     }
 
-    suspend fun checkOnExistToken(username: String): Boolean {
-        return allCollectionImpl.checkOnExistToken(username)
+    suspend fun checkOnExistTokenByUsername(username: String): Boolean {
+        return allCollectionImpl.checkOnExistTokenByUsername(username)
     }
 
     suspend fun createToken(user: UserNameID): Token {

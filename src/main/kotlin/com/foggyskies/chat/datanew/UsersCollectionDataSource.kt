@@ -27,4 +27,6 @@ interface UsersCollectionDataSource {
     suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean
 
     suspend fun checkOnExistUser(username: String): Boolean
+
+    suspend fun getStatusByIdUser(idUser: String): String
 }

@@ -28,6 +28,15 @@ fun Route.usersRoutes() {
         if (!sessionsMainSockets.contains(idUser)) {
             sessionsMainSockets.add(idUser)
             webSocket("/mainSocket/$idUser") {
+
+                val session = call.sessions.get<ChatSession>()
+                if (session == null) {
+                    routController.setStatusUser(idUser, "Не в сети")
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
+                    sessionsMainSockets.remove(idUser)
+                    return@webSocket
+                }
+
                 val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
                 val isTokenExist = routController.checkOnExistToken(token.toString())
 
@@ -43,11 +52,13 @@ fun Route.usersRoutes() {
                             )
                         }"
                     },
-                    "getChats" to suspend { "getChats|${Json.encodeToString(routController.getChats(token.toString()))}"
+                    "getChats" to suspend {
+                        "getChats|${Json.encodeToString(routController.getChats(token.toString()))}"
                     }
                 )
                 val map_action_unit = mapOf(
                     "logOut" to suspend { routController.logOut(token.toString()) },
+                    "deleteAllSentNotifications" to suspend { routController.deleteAllSentNotifications(idUser) }
 //            "acceptRequestFriend" to suspend { roomUserController.acceptRequestFriend() }
                 )
 
@@ -56,60 +67,65 @@ fun Route.usersRoutes() {
                 if (isTokenExist) {
                     routController.setStatusUser(idUser, "В сети")
                     val user = routController.getUserByToken(token.toString())
-                    val session = call.sessions.get<ChatSession>()
-                    if (session == null) {
-                        routController.setStatusUser(idUser, "Не в сети")
-                        close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
-                        return@webSocket
+
+//                    try {
+                    val watcherFriends = async {
+                        routController.watchForFriend(idUser, this@webSocket)
                     }
-                    try {
-                        async {
-                            routController.watchForFriend(idUser, this@webSocket)
-                        }
-                        async {
-                            routController.watchForRequestsFriends(idUser, this@webSocket)
-                        }
+                    val watcherRequestsFriends = async {
+                        routController.watchForRequestsFriends(idUser, this@webSocket)
+                    }
+                    val watcherInternalNotifications = async {
+                        routController.watchForInternalNotifications(idUser, this@webSocket)
+                    }
 
-                        incoming.consumeEach { frame ->
-                            if (frame is Frame.Text) {
-                                val incomingData = frame.readText()
-                                val regex = ".+(?=\\|)".toRegex()
-                                val action = regex.find(incomingData)?.value
 
-                                if (map_actions.containsKey(action)) {
-                                    val friends = map_actions[action]?.invoke()
-                                    if (friends != null) {
-                                        send(friends)
-                                    }
-                                } else if (map_action_unit.containsKey(action)) {
-                                    map_action_unit[action]?.invoke()
-                                } else if (action == "acceptRequestFriend") {
-                                    val idUserReceiver = incomingData.replace("$action|", "")
-                                    val userSender = UserNameID(
+                    incoming.consumeEach { frame ->
+                        if (frame is Frame.Text) {
+                            val incomingData = frame.readText()
+                            val regex = ".+(?=\\|)".toRegex()
+                            val action = regex.find(incomingData)?.value
+
+                            if (map_actions.containsKey(action)) {
+                                val friends = map_actions[action]?.invoke()
+                                if (friends != null) {
+                                    send(friends)
+                                }
+                            } else if (map_action_unit.containsKey(action)) {
+                                map_action_unit[action]?.invoke()
+                            } else if (action == "acceptRequestFriend") {
+                                val idUserReceiver = incomingData.replace("$action|", "")
+                                val userSender = UserNameID(
+                                    id = user.idUser,
+                                    username = user.username
+                                )
+                                routController.acceptRequestFriend(userSender, idUserReceiver)
+                            } else if (action == "addFriend") {
+                                val idReceiver = incomingData.replace("$action|", "")
+                                routController.addRequestToFriend(
+                                    UserNameID(
                                         id = user.idUser,
                                         username = user.username
-                                    )
-                                    routController.acceptRequestFriend(userSender, idUserReceiver)
-                                } else if (action == "addFriend") {
-                                    val idReceiver = incomingData.replace("$action|", "")
-                                    routController.addRequestToFriend(
-                                        UserNameID(
-                                            id = user.idUser,
-                                            username = user.username
-                                        ), idReceiver
-                                    )
-                                }
+                                    ), idReceiver
+                                )
                             }
                         }
-                    } catch (e: Exception) {
-                        println(e)
-                    } finally {
-                        routController.setStatusUser(idUser, "Не в сети")
-                        sessionsMainSockets.remove(idUser)
                     }
+//                    } catch (e: Exception) {
+//                        println(e)
+//                    } finally {
+                    routController.setStatusUser(idUser, "Не в сети")
+                    watcherFriends.cancel()
+                    watcherRequestsFriends.cancel()
+                    watcherInternalNotifications.cancel()
+                    close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
+                    sessionsMainSockets.remove(idUser)
+                    return@webSocket
+//                    }
                 } else {
                     routController.setStatusUser(idUser, "Не в сети")
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
+                    sessionsMainSockets.remove(idUser)
                     return@webSocket
                 }
             }

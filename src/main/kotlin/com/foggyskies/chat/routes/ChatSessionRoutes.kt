@@ -25,7 +25,10 @@ fun Route.chatSessionRoutes() {
                 sessionsChat.add(idChat)
                 val members = ConcurrentHashMap<String, Member>()
                 webSocket("/$idChat{username}") {
-                    routController.chatId = idChat
+//                    routController.chatId = idChat
+                    routController.initChat(idChat)
+//                    routController.firstCompanion = ""
+//                        routController.secondCompanion = ""
                     val session = call.sessions.get<ChatSession>()
                     if (session == null) {
                         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))

@@ -1,5 +1,8 @@
 package com.foggyskies.chat.newroom
 
+import com.foggyskies.chat.data.bettamodels.Notification
+import com.foggyskies.chat.data.model.ChatMainEntity
+import com.foggyskies.chat.data.model.ChatUserEntity
 import com.foggyskies.chat.datanew.AllCollectionImpl
 import com.foggyskies.chat.extendfun.forEachSuspend
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
@@ -7,6 +10,7 @@ import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.http.cio.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.bson.types.ObjectId
 import org.litote.kmongo.coroutine.CoroutineDatabase
 import java.text.SimpleDateFormat
 import java.util.*
@@ -17,7 +21,16 @@ class MessagesRoutController(
     private val db: CoroutineDatabase
 ) {
 
-    var chatId = ""
+//    var chatId = ""
+//
+//    var firstCompanion = ""
+//    var secondCompanion = ""
+
+    lateinit var chatEntity: ChatMainEntity
+
+    suspend fun initChat(idChat: String) {
+        chatEntity = allCollectionImpl.getChatById(idChat)
+    }
 
     suspend fun insertOne(idChat: String, message: ChatMessage) {
         allCollectionImpl.insertOne(idChat, message)
@@ -31,7 +44,12 @@ class MessagesRoutController(
         return allCollectionImpl.getFiftyMessage(idChat)
     }
 
-    suspend fun sendMessage(senderUsername: String, message: String, members: ConcurrentHashMap<String, Member>, idChat: String) {
+    suspend fun sendMessage(
+        senderUsername: String,
+        message: String,
+        members: ConcurrentHashMap<String, Member>,
+        idChat: String
+    ) {
 
         members.values.forEach { member ->
             val sdf = SimpleDateFormat("hh:mm")
@@ -43,6 +61,15 @@ class MessagesRoutController(
             )
 
             insertOne(idChat, messageEntity)
+            val idReceiver =
+                if (chatEntity.firstCompanion?.nameUser != senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
+
+            if (members.keys.size == 1 && idReceiver.nameUser != senderUsername) {
+                if (allCollectionImpl.getStatusByIdUser(idReceiver.idUser) == "Не в сети")
+                    createNotification(senderUsername, idReceiver, message)
+                else
+                    createInternalNotification(senderUsername, idReceiver, message)
+            }
 
             val parsedMessage = Json.encodeToString(messageEntity)
             member.socket.send(Frame.Text(parsedMessage))
@@ -61,7 +88,7 @@ class MessagesRoutController(
                 sessionId = sessionId,
                 socket = socket
             )
-            val messages = getFiftyMessage(chatId)
+            val messages = getFiftyMessage(chatEntity.idChat)
             messages.forEachSuspend { _message ->
                 val json = Json.encodeToString(_message)
                 socket.send(json)
@@ -69,4 +96,47 @@ class MessagesRoutController(
 
         }
     }
+
+    private suspend fun createNotification(senderUsername: String, receiver: ChatUserEntity, message: String) {
+        val isExistDocument = allCollectionImpl.checkOnExistNotificationDocument(receiver.idUser)
+
+        val senderUser =
+            if (chatEntity.firstCompanion?.nameUser == senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
+
+        val notification = Notification(
+            id = chatEntity.idChat,
+            idUser = senderUser.idUser,
+            title = senderUsername,
+            description = message,
+            image = "",
+            status = "Отправлено"
+        )
+
+        if (!isExistDocument)
+            allCollectionImpl.createNotificationDocument(receiver.idUser, notification)
+        else
+            allCollectionImpl.addNotification(receiver.idUser, notification)
+    }
+
+    private suspend fun createInternalNotification(senderUsername: String, receiver: ChatUserEntity, message: String) {
+        val isExistDocument = allCollectionImpl.checkOnExistInternalNotificationDocument(receiver.idUser)
+
+        val senderUser =
+            if (chatEntity.firstCompanion?.nameUser == senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
+
+        val notification = Notification(
+            id = chatEntity.idChat,
+            idUser = senderUser.idUser,
+            title = senderUsername,
+            description = message,
+            image = "",
+            status = "Отправлено"
+        )
+
+        if (!isExistDocument)
+            allCollectionImpl.createInternalNotificationDocument(receiver.idUser, notification)
+        else
+            allCollectionImpl.addInternalNotification(receiver.idUser, notification)
+    }
+
 }
