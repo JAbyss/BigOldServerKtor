@@ -15,6 +15,7 @@ fun Application.configureRouting() {
         notificationRoutes()
 //        chatListRoutes()
         photoRouting()
+        contentRoute()
     }
 }
 

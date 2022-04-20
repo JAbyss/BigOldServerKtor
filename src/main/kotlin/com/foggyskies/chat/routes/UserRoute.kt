@@ -1,6 +1,7 @@
 package com.foggyskies.chat.routes
 
 import com.foggyskies.ChatSession
+import com.foggyskies.chat.data.model.PageProfileDC
 import com.foggyskies.chat.data.model.UserNameID
 import com.foggyskies.chat.extendfun.isTrue
 import com.foggyskies.chat.newroom.UserRoutController
@@ -17,7 +18,10 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.bson.types.ObjectId
 import org.koin.ktor.ext.inject
+import java.io.File
+import java.util.*
 
 private var sessionsMainSockets = ConcurrentList<String>()
 
@@ -33,7 +37,7 @@ fun Route.usersRoutes() {
                 if (session == null) {
                     routController.setStatusUser(idUser, "Не в сети")
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
-                    sessionsMainSockets.remove(idUser)
+//                    sessionsMainSockets.remove(idUser)
                     return@webSocket
                 }
 
@@ -54,7 +58,8 @@ fun Route.usersRoutes() {
                     },
                     "getChats" to suspend {
                         "getChats|${Json.encodeToString(routController.getChats(token.toString()))}"
-                    }
+                    },
+                    "getPagesProfile" to suspend { "getPagesProfile|${Json.encodeToString(routController.getAllPagesByIdUser(idUser))}" }
                 )
                 val map_action_unit = mapOf(
                     "logOut" to suspend { routController.logOut(token.toString()) },
@@ -119,16 +124,45 @@ fun Route.usersRoutes() {
                     watcherRequestsFriends.cancel()
                     watcherInternalNotifications.cancel()
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
-                    sessionsMainSockets.remove(idUser)
+//                    sessionsMainSockets.remove(idUser)
                     return@webSocket
 //                    }
                 } else {
                     routController.setStatusUser(idUser, "Не в сети")
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
-                    sessionsMainSockets.remove(idUser)
+//                    sessionsMainSockets.remove(idUser)
                     return@webSocket
                 }
             }
+        }
+    }
+
+    get("/images/{name_image}") {
+        val name_image = call.parameters["name_image"] ?: call.respond(HttpStatusCode.BadRequest, "Картинка не указана")
+
+        val file = File("images/$name_image")
+        call.respondFile(file)
+    }
+
+    post("/createPageProfile") {
+        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val isTokenExist = routController.checkOnExistToken(token.toString())
+
+        val page = call.receive<PageProfileDC>()
+
+        if (isTokenExist) {
+
+            val decodedString = Base64.getDecoder().decode(page.image)
+            val countFiles = File("images/").list().size + 1
+            File("images/image_profile_$countFiles.png").writeBytes(decodedString)
+
+            val user = routController.getUserByToken(token.toString())
+
+            routController.addOnePage(user.idUser, page.copy(id = ObjectId().toString(), image = "image_profile_$countFiles.png"))
+
+            call.respond(HttpStatusCode.OK, "Страница создана")
+        } else {
+            call.respond(HttpStatusCode.BadRequest, "Token не существует.")
         }
     }
     post("/createMainSocket") {
@@ -145,8 +179,6 @@ fun Route.usersRoutes() {
             call.respond(HttpStatusCode.BadRequest, "Token не существует.")
         }
     }
-
-
 
     webSocket("/user") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
@@ -185,20 +217,6 @@ fun Route.usersRoutes() {
         }
     }
 
-//    get("/users") {
-//
-//        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
-//
-//        val isTokenExist = routController.checkOnExistToken(token.toString())
-//
-//        if (isTokenExist) {
-//            val users = routController.getUsers()
-//            call.respond(users)
-//        } else {
-//            call.respond(HttpStatusCode.NotFound, "Токен не был найден.")
-//        }
-//    }
-
     get("/chats") {
 
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
@@ -216,7 +234,6 @@ fun Route.usersRoutes() {
     }
 
     post("/addFriend") {
-//        val idUserReceiver = call.parameters["idUserReceiver"]
         val idUserReceiver: IdUserReceiver = (call.receive<IdUserReceiver>()
             ?: call.respond(HttpStatusCode.BadRequest, "IdUser не получен.")) as IdUserReceiver
 
@@ -241,37 +258,6 @@ fun Route.usersRoutes() {
 
     }
 
-//    post("/acceptRequestFriend{userID}{username}") {
-//
-//        val userId = call.parameters["userID"] ?: call.respond(HttpStatusCode.BadRequest, "UserID не получен.")
-//        val username =
-//            call.parameters["username"] ?: call.respond(HttpStatusCode.BadRequest, "Username не получен.")
-//
-//        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
-//
-//        isTrue(token.toString().isNotEmpty()) {
-//            val isTokenExist = roomUserController.checkOnExistToken(token.toString())
-//
-//            if (isTokenExist) {
-//
-//                val user = roomUserController.getUserByToken(token.toString())
-//
-//                val userReceiver = UserNameID(
-//                    id = user.idUser,
-//                    username = user.username
-//                )
-//
-//                val userSender = UserNameID(
-//                    id = userId.toString(),
-//                    username = username.toString()
-//                )
-//
-//                roomUserController.acceptRequestFriend(userReceiver, userSender)
-//                call.respond(HttpStatusCode.OK)
-//            }
-//
-//        }
-//    }
     get("/friends") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
 
@@ -286,23 +272,6 @@ fun Route.usersRoutes() {
             }
         }
     }
-//    post {
-//
-//    }
-//    get("/requestsFriends") {
-//        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
-//
-//        isTrue(token.toString().isNotEmpty()) {
-//            val isTokenExist = roomUserController.checkOnExistToken(token.toString())
-//
-//            if (isTokenExist) {
-//                val listRequestsFriends = roomUserController.getRequestsFriends(token.toString())
-//                call.respond(HttpStatusCode.OK, listRequestsFriends)
-//            } else {
-//                call.respond(HttpStatusCode.BadRequest, "Токен неверный.")
-//            }
-//        }
-//    }
 }
 
 @kotlinx.serialization.Serializable

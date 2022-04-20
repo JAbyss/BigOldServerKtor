@@ -3,7 +3,7 @@ package com.foggyskies.chat.newroom
 import com.foggyskies.chat.data.model.RegistrationUserDC
 import com.foggyskies.chat.data.model.UserMainEntity
 import com.foggyskies.chat.data.model.UserNameID
-import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.databases.main.AllCollectionImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import org.litote.kmongo.coroutine.CoroutineDatabase
 
@@ -44,5 +44,4 @@ class AuthRoutController(
     suspend fun checkOnExistEmail(e_mail: String): Boolean {
         return allCollectionImpl.checkOnExistEmail(e_mail)
     }
-
 }

@@ -1,8 +1,9 @@
 package com.foggyskies
 
-import com.foggyskies.chat.data.*
-import com.foggyskies.chat.data.bettamodels.Notification
-import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.databases.content.ContentImpl
+import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.foggyskies.chat.newroom.*
 import com.foggyskies.plugin.configureRouting
 import com.foggyskies.plugin.configureSecurity
@@ -10,12 +11,13 @@ import com.foggyskies.plugin.configureSockets
 import io.ktor.application.*
 import io.ktor.features.*
 import io.ktor.serialization.*
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
 import org.koin.ktor.ext.Koin
+import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.reactivestreams.KMongo
 
@@ -133,6 +135,7 @@ fun Application.module() {
         json(Json {
             prettyPrint = true
             isLenient = true
+            ignoreUnknownKeys = true
         })
     }
     configureSockets()
@@ -140,40 +143,103 @@ fun Application.module() {
     configureSecurity()
 }
 
+enum class DataBases {
+    MAIN, MESSAGES, SUBSCRIBERS, CONTENT
+}
+
+//enum class ImplDB{
+//    CONTENT
+//}
+
+data class ImpAndDB<I>(
+    val db: CoroutineDatabase,
+    val impl: I
+)
+
 val mainModule = module {
-    single {
+    single(named(DataBases.MAIN)) {
         KMongo.createClient()
             .coroutine
             .getDatabase("petapp_db")
     }
-//    factory {
-//        KMongo.createClient()
-//            .coroutine
-//            .getDatabase("petapp_db")
-//    }
+    single(named(DataBases.MESSAGES)) {
+        KMongo.createClient()
+            .coroutine
+            .getDatabase("messages_petapp_db")
+    }
+    single(named(DataBases.SUBSCRIBERS)) {
+        KMongo.createClient()
+            .coroutine
+            .getDatabase("subscribers_petapp_db")
+    }
+    single(named(DataBases.CONTENT)) {
+        KMongo.createClient()
+            .coroutine
+            .getDatabase("content_users_petapp_db")
+    }
+//  ----------------------------------------------------------------------------
+
+    single(named<ContentImpl>()) {
+        ImpAndDB<ContentImpl>(db = get(named(DataBases.CONTENT)), impl = get())
+    }
+    single(named<MessagesDBImpl>()) {
+        ImpAndDB<MessagesDBImpl>(db = get(named(DataBases.MESSAGES)), impl = get())
+    }
+    single(named<AllCollectionImpl>()) {
+        ImpAndDB<AllCollectionImpl>(db = get(named(DataBases.MAIN)), impl = get())
+    }
+    single(named<SubscribersImpl>()) {
+        ImpAndDB<SubscribersImpl>(db = get(named(DataBases.SUBSCRIBERS)), impl = get())
+    }
+//  ----------------------------------------------------------------------------
     single {
-//        val a =
-        AllCollectionImpl(get())
+        ContentImpl(get(named(DataBases.CONTENT)))
     }
     single {
-        UserRoutController(get(), get())
+        SubscribersImpl(get(named(DataBases.SUBSCRIBERS)))
     }
     single {
-        CreateChatRoutController(get(), get())
+        MessagesDBImpl(get(named(DataBases.MESSAGES)))
     }
     single {
-        NotifyRoutController(get(), get())
+        AllCollectionImpl(get(named(DataBases.MAIN)))
     }
     single {
-        MessagesRoutController(get(), get())
+        UserRoutController(
+            content = get(named<ContentImpl>()),
+            main = get(named<AllCollectionImpl>()),
+            message = get(named<MessagesDBImpl>()),
+            subscribers = get(named<SubscribersImpl>())
+        )
     }
     single {
-        AuthRoutController(get(), get())
+        CreateChatRoutController(
+            allCollectionImpl = get(),
+            messagesDB = get(named(DataBases.MESSAGES))
+        )
     }
-//    single<AuthDataSource> {
-//        AuthDataSourceImpl(get())
-//    }
-//    single {
-//        AuthRoomController(get())
-//    }
+    single {
+        NotifyRoutController(
+            allCollectionImpl = get(),
+            db = get(named(DataBases.MAIN))
+        )
+    }
+    single {
+        MessagesRoutController(
+            allCollectionImpl = get(),
+            messagesDBImpl = get()
+        )
+    }
+    single {
+        AuthRoutController(
+            allCollectionImpl = get(),
+            db = get(named(DataBases.MAIN))
+        )
+    }
+    single {
+        ContentRoutController(
+            content = get(named<ContentImpl>()),
+            main = get(named<AllCollectionImpl>())
+        )
+    }
 }

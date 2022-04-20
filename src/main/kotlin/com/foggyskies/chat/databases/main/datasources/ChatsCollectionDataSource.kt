@@ -1,4 +1,4 @@
-package com.foggyskies.chat.datanew
+package com.foggyskies.chat.databases.main.datasources
 
 import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatMainEntity_

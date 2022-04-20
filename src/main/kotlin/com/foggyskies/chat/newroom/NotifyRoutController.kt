@@ -5,7 +5,7 @@ import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatMainEntity_
 import com.foggyskies.chat.data.model.FormattedChatDC
 import com.foggyskies.chat.data.model.UserMainEntity
-import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.databases.main.AllCollectionImpl
 import io.ktor.websocket.*
 import org.litote.kmongo.and
 import org.litote.kmongo.coroutine.CoroutineDatabase

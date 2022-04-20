@@ -25,10 +25,8 @@ fun Route.chatSessionRoutes() {
                 sessionsChat.add(idChat)
                 val members = ConcurrentHashMap<String, Member>()
                 webSocket("/$idChat{username}") {
-//                    routController.chatId = idChat
+
                     routController.initChat(idChat)
-//                    routController.firstCompanion = ""
-//                        routController.secondCompanion = ""
                     val session = call.sessions.get<ChatSession>()
                     if (session == null) {
                         close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "No session."))
@@ -64,7 +62,6 @@ fun Route.chatSessionRoutes() {
                 call.parameters["idChat"] ?: call.respond(HttpStatusCode.BadRequest, "Параметр idChat не получен.")
             if (idChat.toString().isNotEmpty()) {
                 createSocket(idChat.toString(), sessionsChat)
-//                val messages = roomController.getFiftyMessage(idChat.toString())
                 call.respond(HttpStatusCode.Created)
             }
         }

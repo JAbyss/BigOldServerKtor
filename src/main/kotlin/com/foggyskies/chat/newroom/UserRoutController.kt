@@ -1,7 +1,11 @@
 package com.foggyskies.chat.newroom
 
+import com.foggyskies.ImpAndDB
 import com.foggyskies.chat.data.model.*
-import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.databases.content.ContentImpl
+import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
 import io.ktor.websocket.*
@@ -10,27 +14,31 @@ import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
 
 class UserRoutController(
-    private val allCollectionImpl: AllCollectionImpl,
-    private val db: CoroutineDatabase
-) {
+//    private val allCollectionImpl: AllCollectionImpl,
+//    private val db: CoroutineDatabase,
+//    private val subscribersDB: CoroutineDatabase,
+//    private val contentDB: CoroutineDatabase,
+//    private val impAndDB: ImpAndDB<ContentImpl>
+    private val content: ImpAndDB<ContentImpl>,
+    private val main: ImpAndDB<AllCollectionImpl>,
+    private val message: ImpAndDB<MessagesDBImpl>,
+    private val subscribers: ImpAndDB<SubscribersImpl>,
+
+    ) {
     suspend fun checkOnExistToken(token: String): Boolean {
-        return allCollectionImpl.checkOnExistToken(token)
+        return main.impl.checkOnExistToken(token)
     }
 
-//    suspend fun getUsersByUsername(username: String): List<UsersSearch> {
-//        return allCollectionImpl.getUserByUsername(username)
-//    }
-
     suspend fun getChats(token: String): List<FormattedChatDC> {
-        val idUser = db.getCollection<Token>("tokens").findOneById(token)?.idUser!!
-        val idsChats = allCollectionImpl.getChatsByIdUser(idUser)
+        val idUser = main.db.getCollection<Token>("tokens").findOneById(token)?.idUser!!
+        val idsChats = main.impl.getChatsByIdUser(idUser)
         val listChats = mutableListOf<FormattedChatDC>()
 
         idsChats.forEach { id ->
-            val chat = allCollectionImpl.getChatById(id)
+            val chat = main.impl.getChatById(id)
             val companion = if (idUser == chat.firstCompanion?.idUser) chat.secondCompanion!! else chat.firstCompanion!!
-            val imageComp = allCollectionImpl.getUserByIdUser(companion.idUser).image
-            val lastMessage = allCollectionImpl.getLastMessage(id)
+            val imageComp = main.impl.getUserByIdUser(companion.idUser).image
+            val lastMessage = main.impl.getLastMessage(id)
 
             listChats.add(
                 FormattedChatDC(
@@ -42,37 +50,36 @@ class UserRoutController(
                 )
             )
         }
-
         return listChats
     }
 
     suspend fun addRequestToFriend(userSender: UserNameID, idUserReceiver: String) {
-        allCollectionImpl.addRequestFriendsByIdUser(idUserReceiver, userSender)
+        main.impl.addRequestFriendsByIdUser(idUserReceiver, userSender)
     }
 
     suspend fun getUserByToken(token: String): UserMainEntity {
-        val username = allCollectionImpl.getTokenByToken(token).username
-        return allCollectionImpl.getUserByUsername(username)
+        val username = main.impl.getTokenByToken(token).username
+        return main.impl.getUserByUsername(username)
     }
 
     suspend fun acceptRequestFriend(userReceiver: UserNameID, idUserSender: String) {
-        val requestsFriend = allCollectionImpl.getRequestsFriendByIdUser(userReceiver.id)
+        val requestsFriend = main.impl.getRequestsFriendByIdUser(userReceiver.id)
 
 
         if (requestsFriend.isNotEmpty()) {
             requestsFriend.forEach { userSenderL ->
                 if (userSenderL.id == idUserSender) {
-                    val friendCollection = db.getCollection<FriendDC>("friends")
+                    val friendCollection = main.db.getCollection<FriendDC>("friends")
 
-                    val userSender = allCollectionImpl.getUserByIdUser(idUserSender)
+                    val userSender = main.impl.getUserByIdUser(idUserSender)
 
                     val formattedUserSender = UserNameID(
                         id = userSender.idUser,
                         username = userSender.username
                     )
 
-                    val friendsReceiver = allCollectionImpl.getFriendsDocumentFriendByIdUser(userReceiver.id)
-                    val friendsSender = allCollectionImpl.getFriendsDocumentFriendByIdUser(idUserSender)
+                    val friendsReceiver = main.impl.getFriendsDocumentFriendByIdUser(userReceiver.id)
+                    val friendsSender = main.impl.getFriendsDocumentFriendByIdUser(idUserSender)
 
                     if (friendsReceiver != null) {
 
@@ -81,31 +88,22 @@ class UserRoutController(
                             addToSet(FriendDC::friends, formattedUserSender)
                         )
 
-//                        val requestsFriendCollection = db.getCollection<RequestFriendDC>("requestsFriend")
-                        val requestsFriend = allCollectionImpl.getRequestsFriendByIdUser(userReceiver.id)
+                        val requestsFriend = main.impl.getRequestsFriendByIdUser(userReceiver.id)
                         if (requestsFriend.isNotEmpty())
-                            allCollectionImpl.delRequestFriendsByIdUser(userReceiver.id, formattedUserSender)
-//                            requestsFriendCollection.updateOne(
-//                                RequestFriendDC::id eq userReceiver.id,
-//                                pull(RequestFriendDC::requests, formattedUserSender)
-//                            )
+                            main.impl.delRequestFriendsByIdUser(userReceiver.id, formattedUserSender)
                     } else {
                         val document = FriendDC(
                             idUser = userReceiver.id,
                             friends = listOf(formattedUserSender)
                         )
                         friendCollection.insertOne(document)
-                        val requestsFriend = allCollectionImpl.getRequestsFriendByIdUser(userReceiver.id)
+                        val requestsFriend = main.impl.getRequestsFriendByIdUser(userReceiver.id)
                         if (requestsFriend.isNotEmpty())
-                            allCollectionImpl.delRequestFriendsByIdUser(userReceiver.id, formattedUserSender)
+                            main.impl.delRequestFriendsByIdUser(userReceiver.id, formattedUserSender)
                     }
 
                     if (friendsSender != null) {
-                        allCollectionImpl.addFriendByIdUser(formattedUserSender.id, userReceiver)
-//                        friendCollection.updateOne(
-//                            FriendDC::idUser eq formattedUserSender.id,
-//                            addToSet(FriendDC::friends, userReceiver)
-//                        )
+                        main.impl.addFriendByIdUser(formattedUserSender.id, userReceiver)
                     } else {
                         val document = FriendDC(
                             idUser = formattedUserSender.id,
@@ -119,12 +117,12 @@ class UserRoutController(
     }
 
     suspend fun getFriends(token: String): List<FriendListDC> {
-        val idUser = allCollectionImpl.getTokenByToken(token).idUser
-        val friends = allCollectionImpl.getFriendsByIdUser(idUser)
+        val idUser = main.impl.getTokenByToken(token).idUser
+        val friends = main.impl.getFriendsByIdUser(idUser)
         val listFormattedFriends = mutableListOf<FriendListDC>()
 
         friends.forEach { friend ->
-            val user = allCollectionImpl.getUserByIdUser(friend.id)
+            val user = main.impl.getUserByIdUser(friend.id)
             listFormattedFriends.add(
                 FriendListDC(
                     id = user.idUser,
@@ -139,13 +137,13 @@ class UserRoutController(
     }
 
     suspend fun getRequestsFriends(token: String): List<UserIUSI> {
-        val idUser = allCollectionImpl.getTokenByToken(token).idUser
-        val request = allCollectionImpl.getRequestsFriendByIdUser(idUser)
+        val idUser = main.impl.getTokenByToken(token).idUser
+        val request = main.impl.getRequestsFriendByIdUser(idUser)
         val listFormattedRequests = mutableListOf<UserIUSI>()
 
         request.forEach { user ->
 
-            val fullUser = allCollectionImpl.getUserByIdUser(user.id)
+            val fullUser = main.impl.getUserByIdUser(user.id)
 
             listFormattedRequests.add(UserIUSI(
                 id = fullUser.idUser,
@@ -158,31 +156,65 @@ class UserRoutController(
     }
 
     suspend fun watchForRequestsFriends(idUser: String, socket: DefaultWebSocketServerSession) {
-        allCollectionImpl.watchForRequestsFriends(idUser, socket)
+        main.impl.watchForRequestsFriends(idUser, socket)
     }
 
     suspend fun watchForFriend(idUser: String, socket: DefaultWebSocketServerSession) {
-        allCollectionImpl.watchForFriend(idUser, socket)
+        main.impl.watchForFriend(idUser, socket)
     }
 
     suspend fun watchForInternalNotifications(idUser: String, socket: DefaultWebSocketServerSession) {
-        allCollectionImpl.watchForInternalNotifications(idUser, socket)
+        main.impl.watchForInternalNotifications(idUser, socket)
     }
 
     suspend fun logOut(token: String) {
-        allCollectionImpl.delTokenByTokenId(token)
+        main.impl.delTokenByTokenId(token)
     }
 
     suspend fun searchUsers(idUser: String, username: String): List<UsersSearch>{
-        return allCollectionImpl.searchUsers(idUser, username)
+        return main.impl.searchUsers(idUser, username)
     }
 
     suspend fun setStatusUser(idUser: String, status: String){
-        allCollectionImpl.setStatusUser(idUser, status)
+        main.impl.setStatusUser(idUser, status)
     }
 
     suspend fun deleteAllSentNotifications(idUser: String){
-        println("Я ПОПАЛ СЮДА")
-        allCollectionImpl.deleteAllSentNotifications(idUser)
+        main.impl.deleteAllSentNotifications(idUser)
+    }
+
+    suspend fun addOnePage(idUser: String, item: PageProfileDC) {
+        main.db.getCollection<PageProfileDC>("pages_profile").insertOne(item)
+        subscribers.db.createCollection("subscribers_${item.id}")
+        content.db.createCollection("content_${item.id}")
+        main.db.getCollection<UserMainEntity>("users").findOneAndUpdate(UserMainEntity::idUser eq idUser, addToSet(UserMainEntity::pages_profile, item.id))
+    }
+
+    suspend fun getPageById(idPage: String): PageProfileDC? {
+        return main.db.getCollection<PageProfileDC>("pages_profile").findOne(PageProfileDC::id eq idPage)
+    }
+
+    private suspend fun getAllPagesByList(listIds: List<String>): List<PageProfileFormattedDC> {
+        val listAllPages = mutableListOf<PageProfileFormattedDC>()
+        listIds.forEach { id ->
+            main.db.getCollection<PageProfileDC>("pages_profile").findOne(PageProfileDC::id eq id)
+                ?.let {
+                    val countSubscribers = subscribers.db.getCollection<SubscribersDC>("subscribers_${it.id}").countDocuments().toString()
+                    val countContent = content.db.getCollection<ContentUsersDC>("content_${it.id}").countDocuments().toString()
+                    listAllPages.add(it.withCountSubsAndContents(countSubscribers, countContent))
+                }
+        }
+        return listAllPages.toList()
+    }
+
+    suspend fun deletePage(idPage: String) {
+        main.db.getCollection<PageProfileDC>("pages_profile").deleteOne(PageProfileDC::id eq idPage)
+        subscribers.db.dropCollection("subscribers_$idPage")
+        content.db.dropCollection("content_$idPage")
+    }
+
+    suspend fun getAllPagesByIdUser(idUser: String): List<PageProfileFormattedDC>{
+        val listIdPages = main.impl.getUserByIdUser(idUser).pages_profile
+        return getAllPagesByList(listIdPages)
     }
 }

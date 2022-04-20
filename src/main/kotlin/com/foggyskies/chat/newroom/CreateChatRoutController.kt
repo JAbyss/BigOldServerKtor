@@ -1,14 +1,14 @@
 package com.foggyskies.chat.newroom
 
 import com.foggyskies.chat.data.model.UserIUSI
-import com.foggyskies.chat.datanew.AllCollectionImpl
-import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import com.foggyskies.chat.databases.main.AllCollectionImpl
 import org.litote.kmongo.coroutine.CoroutineDatabase
 
 class CreateChatRoutController(
     private val allCollectionImpl: AllCollectionImpl,
-    private val db: CoroutineDatabase
-) {
+//    private val mainDB: CoroutineDatabase,
+    private val messagesDB: CoroutineDatabase
+    ) {
 
     suspend fun checkOnExistChatByIdUsers(idUserFirst: String, idUserSecond: String): String {
         return allCollectionImpl.checkOnExistChatByIdUsers(idUserFirst, idUserSecond)
@@ -19,7 +19,7 @@ class CreateChatRoutController(
         val secondCompanion = allCollectionImpl.getUserByIdUser(idUserSecond).toUserNameID()
         val idChat = allCollectionImpl.createChat(firstCompanion, secondCompanion)
         allCollectionImpl.addChatToUsersByIdUsers(firstCompanion.id, secondCompanion.id, idChat)
-        db.createCollection("messages-$idChat")
+        messagesDB.createCollection("messages-$idChat")
         return idChat
     }
 

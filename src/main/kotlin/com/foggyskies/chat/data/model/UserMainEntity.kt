@@ -13,6 +13,7 @@ data class UserMainEntity(
     var image: String = "",
     var status: String = "",
     var chats: List<String> = emptyList(),
+    var pages_profile: List<String> = emptyList(),
     val password: String
 ){
     fun toUserNameID(): UserNameID {

@@ -1,13 +1,14 @@
-package com.foggyskies.chat.datanew
+package com.foggyskies.chat.databases.main
 
 import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.bettamodels.NotificationDocument
 import com.foggyskies.chat.data.model.*
+import com.foggyskies.chat.databases.main.datasources.*
+import com.foggyskies.chat.databases.message.datasources.MessagesCollectionDataSource
 import com.foggyskies.chat.extendfun.forEachSuspend
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
-import com.mongodb.client.model.changestream.FullDocument
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.decodeFromString
@@ -16,13 +17,12 @@ import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.coroutine.insertOne
 
 class AllCollectionImpl(
     private val db: CoroutineDatabase
 ) : UsersCollectionDataSource, ChatsCollectionDataSource, FriendsCollectionDataSource,
     RequestsFriendsCollectionDataSource, TokenCollectionDataSource, MessagesCollectionDataSource,
-    NotifyCollectionDataSource {
+    NotifyCollectionDataSource, PagesProfileDataSource {
     override suspend fun checkOnExistChatByIdUsers(idUserFirst: String, idUserSecond: String): String {
         val idChat = db.getCollection<ChatMainEntity>("chats").findOne(
             and(
@@ -462,5 +462,21 @@ class AllCollectionImpl(
                 }
             }
         }
+    }
+
+    override suspend fun addOnePage(item: PageProfileDC) {
+        db.getCollection<PageProfileDC>("pages_profile").insertOne(item)
+    }
+
+    override suspend fun getPageById(idPage: String): PageProfileDC? {
+        return db.getCollection<PageProfileDC>("pages_profile").findOne(PageProfileDC::id eq idPage)
+    }
+
+    override suspend fun getAllPagesByList(listIds: List<String>): List<PageProfileDC> {
+        return db.getCollection<PageProfileDC>("pages_profile").find().toList()
+    }
+
+    override suspend fun deletePage(idPage: String) {
+        db.getCollection<PageProfileDC>("pages_profile").deleteOne(PageProfileDC::id eq idPage)
     }
 }

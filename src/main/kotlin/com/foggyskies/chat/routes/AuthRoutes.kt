@@ -49,11 +49,13 @@ fun Route.authRoutes() {
                 var token = ""
                 val isTokenExist = routController.checkOnExistTokenByUsername(params.username)
                 if (!isTokenExist) {
-                    token = routController.createToken(user.toUserNameID()).id
+                    val tokenDC = routController.createToken(user.toUserNameID())
+                    token = "${tokenDC.id}|${tokenDC.idUser}"
                     println("Новый токен создан")
                     call.respond(HttpStatusCode.Created, token)
                 } else {
-                    token = routController.getToken(params.username).id
+                    val tokenDC = routController.createToken(user.toUserNameID())
+                    token = "${tokenDC.id}|${tokenDC.idUser}"
                     println("Старый токен получен")
                     call.respond(HttpStatusCode.OK, token)
                 }

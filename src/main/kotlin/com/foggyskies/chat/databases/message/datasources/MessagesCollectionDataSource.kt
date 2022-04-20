@@ -1,4 +1,4 @@
-package com.foggyskies.chat.datanew
+package com.foggyskies.chat.databases.message.datasources
 
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 

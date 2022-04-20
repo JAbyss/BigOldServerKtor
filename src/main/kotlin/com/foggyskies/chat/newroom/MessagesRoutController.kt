@@ -3,28 +3,23 @@ package com.foggyskies.chat.newroom
 import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatUserEntity
-import com.foggyskies.chat.datanew.AllCollectionImpl
+import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.extendfun.forEachSuspend
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.http.cio.websocket.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import org.bson.types.ObjectId
-import org.litote.kmongo.coroutine.CoroutineDatabase
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class MessagesRoutController(
     private val allCollectionImpl: AllCollectionImpl,
-    private val db: CoroutineDatabase
+    private val messagesDBImpl: MessagesDBImpl
+//    private val db: CoroutineDatabase
 ) {
-
-//    var chatId = ""
-//
-//    var firstCompanion = ""
-//    var secondCompanion = ""
 
     lateinit var chatEntity: ChatMainEntity
 
@@ -32,16 +27,16 @@ class MessagesRoutController(
         chatEntity = allCollectionImpl.getChatById(idChat)
     }
 
-    suspend fun insertOne(idChat: String, message: ChatMessage) {
-        allCollectionImpl.insertOne(idChat, message)
+    private suspend fun insertOne(idChat: String, message: ChatMessage) {
+        messagesDBImpl.insertOne(idChat, message)
     }
 
     suspend fun getAllMessages(idChat: String): List<ChatMessage> {
-        return allCollectionImpl.getAllMessages(idChat)
+        return messagesDBImpl.getAllMessages(idChat)
     }
 
-    suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
-        return allCollectionImpl.getFiftyMessage(idChat)
+    private suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
+        return messagesDBImpl.getFiftyMessage(idChat)
     }
 
     suspend fun sendMessage(
