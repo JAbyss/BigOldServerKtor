@@ -1,3 +1,10 @@
 package com.foggyskies.chat.data.model
 
-data class AvatarDC()
+import org.bson.codecs.pojo.annotations.BsonId
+
+@kotlinx.serialization.Serializable
+data class AvatarDC(
+    @BsonId
+    var idUser: String,
+    var image: String
+)

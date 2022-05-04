@@ -58,6 +58,8 @@ class ContentRoutController(
                     id = it.id,
                     address = it.address
                 ),
+                image = "images/image_profile_4.png",
+                author = "Test",
                 countComets = it.comments.size.toString(),
                 countLikes = it.likes.size.toString(),
                 isLiked = it.likes.contains(idUser)
@@ -97,6 +99,8 @@ class ContentRoutController(
 data class SelectedPostWithIdPageProfile(
     var idPageProfile: String,
     var item: ContentPreviewDC,
+    var author: String,
+    var image: String,
     var countLikes: String,
     var countComets: String,
     var isLiked: Boolean

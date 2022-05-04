@@ -3,6 +3,7 @@ package com.foggyskies
 import com.foggyskies.chat.databases.content.ContentImpl
 import com.foggyskies.chat.databases.main.AllCollectionImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.foggyskies.chat.newroom.*
 import com.foggyskies.plugin.configureRouting
@@ -73,6 +74,7 @@ fun <T> checkOldListByNewList(oldList: MutableList<T>, newList: MutableList<T>):
     return result
 }
 
+
 //fun main() {
 //
 //    Json.encodeToString(FormattedItem<Char>(item = 'A', isVisible = false))
@@ -118,6 +120,7 @@ fun <T> checkOldListByNewList(oldList: MutableList<T>, newList: MutableList<T>):
 //
 //}
 
+
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 data class ChatSession(
@@ -144,7 +147,7 @@ fun Application.module() {
 }
 
 enum class DataBases {
-    MAIN, MESSAGES, SUBSCRIBERS, CONTENT
+    MAIN, MESSAGES, SUBSCRIBERS, CONTENT, NEW_MESSAGE
 }
 
 //enum class ImplDB{
@@ -177,6 +180,11 @@ val mainModule = module {
             .coroutine
             .getDatabase("content_users_petapp_db")
     }
+    single(named(DataBases.NEW_MESSAGE)) {
+        KMongo.createClient()
+            .coroutine
+            .getDatabase("new_messages_db")
+    }
 //  ----------------------------------------------------------------------------
 
     single(named<ContentImpl>()) {
@@ -191,6 +199,9 @@ val mainModule = module {
     single(named<SubscribersImpl>()) {
         ImpAndDB<SubscribersImpl>(db = get(named(DataBases.SUBSCRIBERS)), impl = get())
     }
+    single(named<NewMessagesDBImpl>()) {
+        ImpAndDB<NewMessagesDBImpl>(db = get(named(DataBases.NEW_MESSAGE)), impl = get())
+    }
 //  ----------------------------------------------------------------------------
     single {
         ContentImpl(get(named(DataBases.CONTENT)))
@@ -204,6 +215,10 @@ val mainModule = module {
     single {
         AllCollectionImpl(get(named(DataBases.MAIN)))
     }
+    single {
+        NewMessagesDBImpl(get(named(DataBases.NEW_MESSAGE)))
+    }
+//  ----------------------------------------------------------------------------
     single {
         UserRoutController(
             content = get(named<ContentImpl>()),
@@ -226,8 +241,9 @@ val mainModule = module {
     }
     single {
         MessagesRoutController(
-            allCollectionImpl = get(),
-            messagesDBImpl = get()
+            main = get(named<AllCollectionImpl>()),
+            message = get(named<MessagesDBImpl>()),
+            new_message = get(named<NewMessagesDBImpl>())
         )
     }
     single {

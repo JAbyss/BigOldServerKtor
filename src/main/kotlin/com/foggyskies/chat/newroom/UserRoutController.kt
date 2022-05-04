@@ -8,10 +8,11 @@ import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import io.ktor.http.ContentDisposition.Companion.File
 import io.ktor.websocket.*
 import org.litote.kmongo.addToSet
-import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
+import java.io.File
 
 class UserRoutController(
 //    private val allCollectionImpl: AllCollectionImpl,
@@ -37,8 +38,8 @@ class UserRoutController(
         idsChats.forEach { id ->
             val chat = main.impl.getChatById(id)
             val companion = if (idUser == chat.firstCompanion?.idUser) chat.secondCompanion!! else chat.firstCompanion!!
-            val imageComp = main.impl.getUserByIdUser(companion.idUser).image
-            val lastMessage = main.impl.getLastMessage(id)
+            val imageComp = main.impl.getAvatarByIdUser(companion.idUser)
+            val lastMessage = message.impl.getLastMessage(id)
 
             listChats.add(
                 FormattedChatDC(
@@ -60,6 +61,10 @@ class UserRoutController(
     suspend fun getUserByToken(token: String): UserMainEntity {
         val username = main.impl.getTokenByToken(token).username
         return main.impl.getUserByUsername(username)
+    }
+
+    suspend fun getUserByIdUser(idUser: String): UserMainEntity {
+        return main.impl.getUserByIdUser(idUser)
     }
 
     suspend fun acceptRequestFriend(userReceiver: UserNameID, idUserSender: String) {
@@ -123,12 +128,13 @@ class UserRoutController(
 
         friends.forEach { friend ->
             val user = main.impl.getUserByIdUser(friend.id)
+            val image = main.impl.getAvatarByIdUser(friend.id)
             listFormattedFriends.add(
                 FriendListDC(
                     id = user.idUser,
                     username = user.username,
                     status = user.status,
-                    image = user.image
+                    image = image
                 )
             )
         }
@@ -216,5 +222,17 @@ class UserRoutController(
     suspend fun getAllPagesByIdUser(idUser: String): List<PageProfileFormattedDC>{
         val listIdPages = main.impl.getUserByIdUser(idUser).pages_profile
         return getAllPagesByList(listIdPages)
+    }
+
+    suspend fun getAvatarByIdUser(idUser: String): String {
+        return main.impl.getAvatarByIdUser(idUser)
+    }
+
+    suspend fun changeAvatarByUserId(idUser: String, pathToImage: String): String {
+        return main.impl.changeAvatarByUserId(idUser, pathToImage)
+    }
+
+    suspend fun deleteAvatarByIdUser(idUser: String, avatarOld: String) {
+        File(avatarOld).delete()
     }
 }

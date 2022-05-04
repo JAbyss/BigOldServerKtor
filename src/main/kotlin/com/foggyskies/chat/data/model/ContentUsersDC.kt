@@ -21,6 +21,8 @@ data class ContentUsersDC(
                 id = id,
                 address = address
             ),
+            image = "",
+            author = "",
             countComets = comments.size.toString(),
             countLikes = likes.size.toString(),
             isLiked = likes.contains(idUser)

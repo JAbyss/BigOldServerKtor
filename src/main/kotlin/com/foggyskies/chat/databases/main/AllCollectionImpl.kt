@@ -17,12 +17,13 @@ import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
-
+import org.litote.kmongo.coroutine.insertOne
+//MessagesCollectionDataSource
 class AllCollectionImpl(
     private val db: CoroutineDatabase
 ) : UsersCollectionDataSource, ChatsCollectionDataSource, FriendsCollectionDataSource,
-    RequestsFriendsCollectionDataSource, TokenCollectionDataSource, MessagesCollectionDataSource,
-    NotifyCollectionDataSource, PagesProfileDataSource {
+    RequestsFriendsCollectionDataSource, TokenCollectionDataSource,
+    NotifyCollectionDataSource, PagesProfileDataSource, AvatarsCollectionDataSource {
     override suspend fun checkOnExistChatByIdUsers(idUserFirst: String, idUserSecond: String): String {
         val idChat = db.getCollection<ChatMainEntity>("chats").findOne(
             and(
@@ -249,6 +250,11 @@ class AllCollectionImpl(
             password = registrationUserDC.password,
             e_mail = registrationUserDC.e_mail,
         )
+        val avatar = AvatarDC(
+            idUser = user.idUser,
+            image = ""
+        )
+        db.getCollection<AvatarDC>("avatars").insertOne(avatar)
         db.getCollection<UserMainEntity>("users").insertOne(user)
     }
 
@@ -318,23 +324,23 @@ class AllCollectionImpl(
         return db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::idUser eq idUser)?.status!!
     }
 
-    override suspend fun insertOne(idChat: String, message: ChatMessage) {
-        db.getCollection<ChatMessage>("messages-$idChat").insertOne(message)
-    }
-
-    override suspend fun getAllMessages(idChat: String): List<ChatMessage> {
-        return db.getCollection<ChatMessage>("messages-$idChat").find().toList()
-    }
-
-    override suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
-        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(50)
-            .toList().reversed()
-    }
-
-    override suspend fun getLastMessage(idChat: String): String {
-        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(1)
-            .first()?.message ?: ""
-    }
+//    override suspend fun insertOne(idChat: String, message: ChatMessage) {
+//        db.getCollection<ChatMessage>("messages-$idChat").insertOne(message)
+//    }
+//
+//    override suspend fun getAllMessages(idChat: String): List<ChatMessage> {
+//        return db.getCollection<ChatMessage>("messages-$idChat").find().toList()
+//    }
+//
+//    override suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
+//        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(50)
+//            .toList().reversed()
+//    }
+//
+//    override suspend fun getLastMessage(idChat: String): String {
+//        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(1)
+//            .first()?.message ?: ""
+//    }
 
     override suspend fun checkOnExistNotificationDocument(idReceiver: String): Boolean {
         return db.getCollection<NotificationDocument>("notifications")
@@ -478,5 +484,15 @@ class AllCollectionImpl(
 
     override suspend fun deletePage(idPage: String) {
         db.getCollection<PageProfileDC>("pages_profile").deleteOne(PageProfileDC::id eq idPage)
+    }
+
+    override suspend fun getAvatarByIdUser(idUser: String): String {
+        return db.getCollection<AvatarDC>("avatars").findOne(AvatarDC::idUser eq idUser)?.image ?: ""
+    }
+
+    override suspend fun changeAvatarByUserId(idUser: String, pathToImage: String): String {
+        db.getCollection<AvatarDC>("avatars")
+            .findOneAndUpdate(AvatarDC::idUser eq idUser, setValue(AvatarDC::image, pathToImage))?.image
+        return pathToImage
     }
 }

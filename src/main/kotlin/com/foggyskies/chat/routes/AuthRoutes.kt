@@ -30,7 +30,7 @@ fun Route.authRoutes() {
                     password = params.password,
                     e_mail = params.e_mail,
                 )
-                routController.creteUser(user)
+                routController.createUser(user)
                 call.respond(status = HttpStatusCode.Created, message = "Регистрация прошла успешно.")
             }
         }
@@ -54,7 +54,7 @@ fun Route.authRoutes() {
                     println("Новый токен создан")
                     call.respond(HttpStatusCode.Created, token)
                 } else {
-                    val tokenDC = routController.createToken(user.toUserNameID())
+                    val tokenDC = routController.getToken(params.username)
                     token = "${tokenDC.id}|${tokenDC.idUser}"
                     println("Старый токен получен")
                     call.respond(HttpStatusCode.OK, token)

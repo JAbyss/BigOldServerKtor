@@ -10,5 +10,6 @@ data class ChatMessage(
     var id: String = ObjectId().toString(),
     var author: String,
     var date: String,
-    var message: String
+    var message: String,
+    var listImages: List<String> = emptyList()
 )

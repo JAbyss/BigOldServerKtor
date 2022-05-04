@@ -20,7 +20,7 @@ class AuthRoutController(
         return allCollectionImpl.checkOnExistUser(username)
     }
 
-    suspend fun creteUser(user: RegistrationUserDC) {
+    suspend fun createUser(user: RegistrationUserDC) {
         allCollectionImpl.createUser(user)
     }
 

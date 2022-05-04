@@ -7,7 +7,7 @@ import org.litote.kmongo.coroutine.CoroutineDatabase
 
 class MessagesDBImpl(
     private val db: CoroutineDatabase
-): MessagesCollectionDataSource {
+) : MessagesCollectionDataSource {
 
     override suspend fun insertOne(idChat: String, message: ChatMessage) {
         db.getCollection<ChatMessage>("messages-$idChat").insertOne(message)
@@ -23,7 +23,18 @@ class MessagesDBImpl(
     }
 
     override suspend fun getLastMessage(idChat: String): String {
-        return db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(1)
-            .first()?.message ?: ""
+        val chat = db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(1)
+            .first()
+
+        return if (chat != null) {
+            if (chat.message.isEmpty()) {
+                if (chat.listImages.isNotEmpty())
+                    "Изображение"
+                else
+                    ""
+            } else
+                db.getCollection<ChatMessage>("messages-$idChat").find().sort("{ \$natural: -1 }".bson).limit(1)
+                    .first()?.message ?: ""
+        } else ""
     }
 }

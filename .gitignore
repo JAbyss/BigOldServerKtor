@@ -74,3 +74,4 @@ outTmp/
 /kotlin-native/dist
 kotlin-ide/
 images/
+src/main/kotlin/com/foggyskies/PasswordCoder.kt
