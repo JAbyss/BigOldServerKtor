@@ -1,9 +1,10 @@
 package com.foggyskies.chat.newroom
 
-import com.foggyskies.ImpAndDB
+
 import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatUserEntity
+import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.main.AllCollectionImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
@@ -12,9 +13,7 @@ import com.foggyskies.chat.routes.MessageDC
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.http.cio.websocket.*
-import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.delay
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
@@ -24,16 +23,11 @@ import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import kotlin.coroutines.coroutineContext
-import kotlin.coroutines.suspendCoroutine
 
 class MessagesRoutController(
     private val main: ImpAndDB<AllCollectionImpl>,
     private val message: ImpAndDB<MessagesDBImpl>,
-    private val new_message: ImpAndDB<NewMessagesDBImpl>,
-//    private val allCollectionImpl: AllCollectionImpl,
-//    private val messagesDBImpl: MessagesDBImpl
-//    private val db: CoroutineDatabase
+    private val new_message: ImpAndDB<NewMessagesDBImpl>
 ) : CheckTokenExist(main.db) {
 
     lateinit var chatEntity: ChatMainEntity
@@ -135,7 +129,6 @@ class MessagesRoutController(
             }
             new_message.impl.clearOneChat(idChat, idUser)
         }
-//        new_message.impl.clearOneChat(idChat, idUser)
     }
 
     private suspend fun createNotification(senderUsername: String, receiver: ChatUserEntity, message: String) {
@@ -194,32 +187,77 @@ class MessagesRoutController(
     }
 }
 
-suspend fun main() {
+//suspend fun main() {
+////    coroutineScope {
+////        async {
+////
+////
+////        }
+////    }
+//    testFun(callBack = {
+//        println(it)
+//    })
+//    println("All Ended")
+//}
+//
+//suspend fun testFun(callBack: (String) -> Unit) {
 //    coroutineScope {
+//        val b = "Eee"
+//        callBack(b)
 //        async {
 //
-//
+//            var a = 0
+//            while (a < 50) {
+//                a++
+//                println(a)
+//                delay(100)
+//            }
 //        }
 //    }
-    testFun(callBack = {
-        println(it)
-    })
-    println("All Ended")
-}
+//
+//}
 
-suspend fun testFun(callBack: (String) -> Unit) {
-    coroutineScope {
-        val b = "Eee"
-        callBack(b)
-        async {
 
-            var a = 0
-            while (a < 50) {
-                a++
-                println(a)
-                delay(100)
-            }
-        }
-    }
 
-}
+
+//class CheckInt {
+//
+//    constructor(
+//        a: () -> Unit,
+//    ) {
+//        if (true)
+//            a()
+//    }
+//
+//}
+//
+//interface RightMenusss{
+//
+//    fun getFriends(){
+//
+//    }
+//
+//}
+//interface iter {
+//    fun getUsers(){
+//        println("aaa")
+//    }
+//}
+//interface checkInter{
+//    fun check(action: () -> Unit){
+//        if (false)
+//            action()
+//    }
+//}
+//object RightMenusActions: checkInter {
+//
+//    fun getFriends(action: () -> Unit = {
+//        println("aaaa")
+//    }) = check(action)
+//
+//}
+//
+//fun main() {
+//
+//   RightMenusActions.getFriends()
+//}

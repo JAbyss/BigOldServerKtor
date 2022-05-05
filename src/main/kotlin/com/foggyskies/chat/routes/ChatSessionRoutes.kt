@@ -1,6 +1,6 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.ChatSession
+import com.foggyskies.chat.data.model.ChatSession
 import com.foggyskies.chat.newroom.MessagesRoutController
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.application.*

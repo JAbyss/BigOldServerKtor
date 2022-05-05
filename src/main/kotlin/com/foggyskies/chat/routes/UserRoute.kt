@@ -1,6 +1,6 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.ChatSession
+import com.foggyskies.chat.data.model.ChatSession
 import com.foggyskies.chat.data.model.PageProfileDC
 import com.foggyskies.chat.data.model.UserNameID
 import com.foggyskies.chat.extendfun.isTrue
@@ -15,7 +15,7 @@ import io.ktor.routing.*
 import io.ktor.sessions.*
 import io.ktor.util.collections.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json

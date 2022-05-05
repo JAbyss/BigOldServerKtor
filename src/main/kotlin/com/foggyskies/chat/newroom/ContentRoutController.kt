@@ -1,6 +1,5 @@
 package com.foggyskies.chat.newroom
 
-import com.foggyskies.ImpAndDB
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
 import com.foggyskies.chat.databases.main.AllCollectionImpl
@@ -11,9 +10,6 @@ import java.util.*
 class ContentRoutController(
     private val content: ImpAndDB<ContentImpl>,
     private val main: ImpAndDB<AllCollectionImpl>
-//    private val main: ImpAndDB<AllCollectionImpl>,
-//    private val message: ImpAndDB<MessagesDBImpl>,
-//    private val subscribers: ImpAndDB<SubscribersImpl>,
 ) : CheckTokenExist(main.db) {
 
     suspend fun getFirstFiftyContent(idPageProfile: String): List<ContentPreviewDC> {

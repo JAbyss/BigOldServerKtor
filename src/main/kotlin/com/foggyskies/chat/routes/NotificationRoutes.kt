@@ -1,6 +1,6 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.ChatSession
+import com.foggyskies.chat.data.model.ChatSession
 import com.foggyskies.chat.newroom.NotifyRoutController
 import io.ktor.application.*
 import io.ktor.http.*

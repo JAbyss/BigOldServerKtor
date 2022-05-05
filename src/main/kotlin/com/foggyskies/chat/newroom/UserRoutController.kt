@@ -1,6 +1,5 @@
 package com.foggyskies.chat.newroom
 
-import com.foggyskies.ImpAndDB
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
 import com.foggyskies.chat.databases.main.AllCollectionImpl
@@ -8,23 +7,16 @@ import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
-import io.ktor.http.ContentDisposition.Companion.File
 import io.ktor.websocket.*
 import org.litote.kmongo.addToSet
 import org.litote.kmongo.eq
 import java.io.File
 
 class UserRoutController(
-//    private val allCollectionImpl: AllCollectionImpl,
-//    private val db: CoroutineDatabase,
-//    private val subscribersDB: CoroutineDatabase,
-//    private val contentDB: CoroutineDatabase,
-//    private val impAndDB: ImpAndDB<ContentImpl>
     private val content: ImpAndDB<ContentImpl>,
     private val main: ImpAndDB<AllCollectionImpl>,
     private val message: ImpAndDB<MessagesDBImpl>,
     private val subscribers: ImpAndDB<SubscribersImpl>,
-
     ) {
     suspend fun checkOnExistToken(token: String): Boolean {
         return main.impl.checkOnExistToken(token)

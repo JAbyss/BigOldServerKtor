@@ -1,8 +1,8 @@
 package com.foggyskies.plugin
 
-import com.foggyskies.ChatSession
-import io.ktor.sessions.*
+import com.foggyskies.chat.data.model.ChatSession
 import io.ktor.application.*
+import io.ktor.sessions.*
 import io.ktor.util.*
 
 
