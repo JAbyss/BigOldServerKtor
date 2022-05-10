@@ -2,14 +2,14 @@ package com.foggyskies.chat.newroom
 
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import org.litote.kmongo.eq
 import java.io.File
 import java.util.*
 
 class ContentRoutController(
     private val content: ImpAndDB<ContentImpl>,
-    private val main: ImpAndDB<AllCollectionImpl>
+    private val main: ImpAndDB<MainDBImpl>
 ) : CheckTokenExist(main.db) {
 
     suspend fun getFirstFiftyContent(idPageProfile: String): List<ContentPreviewDC> {
@@ -19,7 +19,7 @@ class ContentRoutController(
     suspend fun addNewContent(item: ContentRequestDC) {
         val decodedString = Base64.getDecoder().decode(item.item.value)
         val countFiles = File("images/").list().size + 1
-        val nameFile = "images/image_content_$countFiles.png"
+        val nameFile = "images/image_content_$countFiles.jpg"
         File(nameFile).writeBytes(decodedString)
 
         content.impl.addNewContent(item.idPageProfile, item.item.toNewPost(nameFile))
@@ -54,7 +54,7 @@ class ContentRoutController(
                     id = it.id,
                     address = it.address
                 ),
-                image = "images/image_profile_4.png",
+                image = "images/image_profile_4.jpg",
                 author = "Test",
                 countComets = it.comments.size.toString(),
                 countLikes = it.likes.size.toString(),

@@ -23,6 +23,7 @@ import org.bson.types.ObjectId
 import org.koin.ktor.ext.inject
 import java.io.File
 import java.util.*
+import kotlin.math.round
 
 private var sessionsMainSockets = ConcurrentList<String>()
 
@@ -93,6 +94,9 @@ fun Route.usersRoutes() {
 //                    val watcherInternalNotifications = async {
 //                        routController.watchForInternalNotifications(idUser, this@webSocket)
 //                    }
+                    val watcherNewMessages = async {
+                        routController.watchForNewMessages(idUser, this@webSocket)
+                    }
 
 
                     incoming.consumeEach { frame ->
@@ -132,6 +136,7 @@ fun Route.usersRoutes() {
                     routController.setStatusUser(idUser, "Не в сети")
                     watcherFriends.cancel()
                     watcherRequestsFriends.cancel()
+                    watcherNewMessages.cancel()
 //                    watcherInternalNotifications.cancel()
                     close(CloseReason(CloseReason.Codes.VIOLATED_POLICY, "Неверный токен"))
 //                    sessionsMainSockets.remove(idUser)
@@ -168,13 +173,13 @@ fun Route.usersRoutes() {
 
             val decodedString = Base64.getDecoder().decode(page.image)
             val countFiles = File("images/").list().size + 1
-            File("images/image_profile_$countFiles.png").writeBytes(decodedString)
+            File("images/image_profile_$countFiles.jpg").writeBytes(decodedString)
 
             val user = routController.getUserByToken(token.toString())
 
             routController.addOnePage(
                 user.idUser,
-                page.copy(id = ObjectId().toString(), image = "image_profile_$countFiles.png")
+                page.copy(id = ObjectId().toString(), image = "image_profile_$countFiles.jpg")
             )
 
             call.respond(HttpStatusCode.OK, "Страница создана")
@@ -325,8 +330,8 @@ fun Route.usersRoutes() {
             val decodedString = Base64.getDecoder().decode(image.toString())
             val countFiles = File("images/avatars/").list().size + 1
             val name = ObjectId().toString()
-            File("images/avatars/avatar_${name}.png").writeBytes(decodedString)
-            val avatar = routController.changeAvatarByUserId(idUser, "images/avatars/avatar_$name.png")
+            File("images/avatars/avatar_${name}.jpg").writeBytes(decodedString)
+            val avatar = routController.changeAvatarByUserId(idUser, "images/avatars/avatar_$name.jpg")
             call.respond(HttpStatusCode.OK, avatar)
         } else {
             call.respond(HttpStatusCode.BadRequest, "Токен не существует.")

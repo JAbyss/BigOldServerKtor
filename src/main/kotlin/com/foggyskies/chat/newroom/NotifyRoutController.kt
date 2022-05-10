@@ -5,7 +5,7 @@ import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatMainEntity_
 import com.foggyskies.chat.data.model.FormattedChatDC
 import com.foggyskies.chat.data.model.UserMainEntity
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import io.ktor.websocket.*
 import org.litote.kmongo.and
 import org.litote.kmongo.coroutine.CoroutineDatabase
@@ -13,27 +13,27 @@ import org.litote.kmongo.eq
 import org.litote.kmongo.or
 
 class NotifyRoutController(
-    private val allCollectionImpl: AllCollectionImpl,
+    private val mainDBImpl: MainDBImpl,
     private val db: CoroutineDatabase
 ) {
 
     suspend fun getNotification(id: String): Notification?{
-        val notification = allCollectionImpl.getNotification(id)
+        val notification = mainDBImpl.getNotification(id)
         return notification
     }
 
     suspend fun watchForNotification(idUser: String, socket: DefaultWebSocketServerSession){
-        allCollectionImpl.watchForNotification(idUser, socket)
+        mainDBImpl.watchForNotification(idUser, socket)
     }
 
     suspend fun getUserByToken(token: String): UserMainEntity {
-        val username = allCollectionImpl.getTokenByToken(token).username
-        return allCollectionImpl.getUserByUsername(username)
+        val username = mainDBImpl.getTokenByToken(token).username
+        return mainDBImpl.getUserByUsername(username)
     }
 
     suspend fun getFormattedChatByUsers(idUserFirst: String, idUserSecond: String): FormattedChatDC {
 
-        val user = allCollectionImpl.getUserByIdUser(idUserSecond)
+        val user = mainDBImpl.getUserByIdUser(idUserSecond)
 
         val idChat = db.getCollection<ChatMainEntity>("chats").findOne(
             and(

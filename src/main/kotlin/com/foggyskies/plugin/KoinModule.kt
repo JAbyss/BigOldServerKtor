@@ -3,7 +3,7 @@ package com.foggyskies.plugin
 import com.foggyskies.DataBases
 import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.content.ContentImpl
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
@@ -47,8 +47,8 @@ val mainModule = module {
     single(named<MessagesDBImpl>()) {
         ImpAndDB<MessagesDBImpl>(db = get(named(DataBases.MESSAGES)), impl = get())
     }
-    single(named<AllCollectionImpl>()) {
-        ImpAndDB<AllCollectionImpl>(db = get(named(DataBases.MAIN)), impl = get())
+    single(named<MainDBImpl>()) {
+        ImpAndDB<MainDBImpl>(db = get(named(DataBases.MAIN)), impl = get())
     }
     single(named<SubscribersImpl>()) {
         ImpAndDB<SubscribersImpl>(db = get(named(DataBases.SUBSCRIBERS)), impl = get())
@@ -67,7 +67,7 @@ val mainModule = module {
         MessagesDBImpl(get(named(DataBases.MESSAGES)))
     }
     single {
-        AllCollectionImpl(get(named(DataBases.MAIN)))
+        MainDBImpl(get(named(DataBases.MAIN)))
     }
     single {
         NewMessagesDBImpl(get(named(DataBases.NEW_MESSAGE)))
@@ -76,40 +76,41 @@ val mainModule = module {
     single {
         UserRoutController(
             content = get(named<ContentImpl>()),
-            main = get(named<AllCollectionImpl>()),
+            main = get(named<MainDBImpl>()),
             message = get(named<MessagesDBImpl>()),
-            subscribers = get(named<SubscribersImpl>())
+            subscribers = get(named<SubscribersImpl>()),
+            new_messages = get(named<NewMessagesDBImpl>())
         )
     }
     single {
         CreateChatRoutController(
-            allCollectionImpl = get(),
+            mainDBImpl = get(),
             messagesDB = get(named(DataBases.MESSAGES))
         )
     }
     single {
         NotifyRoutController(
-            allCollectionImpl = get(),
+            mainDBImpl = get(),
             db = get(named(DataBases.MAIN))
         )
     }
     single {
         MessagesRoutController(
-            main = get(named<AllCollectionImpl>()),
+            main = get(named<MainDBImpl>()),
             message = get(named<MessagesDBImpl>()),
             new_message = get(named<NewMessagesDBImpl>())
         )
     }
     single {
         AuthRoutController(
-            allCollectionImpl = get(),
+            mainDBImpl = get(),
             db = get(named(DataBases.MAIN))
         )
     }
     single {
         ContentRoutController(
             content = get(named<ContentImpl>()),
-            main = get(named<AllCollectionImpl>())
+            main = get(named<MainDBImpl>())
         )
     }
 }

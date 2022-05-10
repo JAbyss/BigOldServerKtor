@@ -2,8 +2,9 @@ package com.foggyskies.chat.newroom
 
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
@@ -14,9 +15,10 @@ import java.io.File
 
 class UserRoutController(
     private val content: ImpAndDB<ContentImpl>,
-    private val main: ImpAndDB<AllCollectionImpl>,
+    private val main: ImpAndDB<MainDBImpl>,
     private val message: ImpAndDB<MessagesDBImpl>,
     private val subscribers: ImpAndDB<SubscribersImpl>,
+    private val new_messages: ImpAndDB<NewMessagesDBImpl>
     ) {
     suspend fun checkOnExistToken(token: String): Boolean {
         return main.impl.checkOnExistToken(token)
@@ -143,12 +145,14 @@ class UserRoutController(
 
             val fullUser = main.impl.getUserByIdUser(user.id)
 
-            listFormattedRequests.add(UserIUSI(
-                id = fullUser.idUser,
-                username = fullUser.username,
-                status = fullUser.status,
-                image = fullUser.image
-            ))
+            listFormattedRequests.add(
+                UserIUSI(
+                    id = fullUser.idUser,
+                    username = fullUser.username,
+                    status = fullUser.status,
+                    image = fullUser.image
+                )
+            )
         }
         return listFormattedRequests
     }
@@ -169,15 +173,15 @@ class UserRoutController(
         main.impl.delTokenByTokenId(token)
     }
 
-    suspend fun searchUsers(idUser: String, username: String): List<UsersSearch>{
+    suspend fun searchUsers(idUser: String, username: String): List<UsersSearch> {
         return main.impl.searchUsers(idUser, username)
     }
 
-    suspend fun setStatusUser(idUser: String, status: String){
+    suspend fun setStatusUser(idUser: String, status: String) {
         main.impl.setStatusUser(idUser, status)
     }
 
-    suspend fun deleteAllSentNotifications(idUser: String){
+    suspend fun deleteAllSentNotifications(idUser: String) {
         main.impl.deleteAllSentNotifications(idUser)
     }
 
@@ -185,7 +189,8 @@ class UserRoutController(
         main.db.getCollection<PageProfileDC>("pages_profile").insertOne(item)
         subscribers.db.createCollection("subscribers_${item.id}")
         content.db.createCollection("content_${item.id}")
-        main.db.getCollection<UserMainEntity>("users").findOneAndUpdate(UserMainEntity::idUser eq idUser, addToSet(UserMainEntity::pages_profile, item.id))
+        main.db.getCollection<UserMainEntity>("users")
+            .findOneAndUpdate(UserMainEntity::idUser eq idUser, addToSet(UserMainEntity::pages_profile, item.id))
     }
 
     suspend fun getPageById(idPage: String): PageProfileDC? {
@@ -197,8 +202,10 @@ class UserRoutController(
         listIds.forEach { id ->
             main.db.getCollection<PageProfileDC>("pages_profile").findOne(PageProfileDC::id eq id)
                 ?.let {
-                    val countSubscribers = subscribers.db.getCollection<SubscribersDC>("subscribers_${it.id}").countDocuments().toString()
-                    val countContent = content.db.getCollection<ContentUsersDC>("content_${it.id}").countDocuments().toString()
+                    val countSubscribers =
+                        subscribers.db.getCollection<SubscribersDC>("subscribers_${it.id}").countDocuments().toString()
+                    val countContent =
+                        content.db.getCollection<ContentUsersDC>("content_${it.id}").countDocuments().toString()
                     listAllPages.add(it.withCountSubsAndContents(countSubscribers, countContent))
                 }
         }
@@ -211,7 +218,7 @@ class UserRoutController(
         content.db.dropCollection("content_$idPage")
     }
 
-    suspend fun getAllPagesByIdUser(idUser: String): List<PageProfileFormattedDC>{
+    suspend fun getAllPagesByIdUser(idUser: String): List<PageProfileFormattedDC> {
         val listIdPages = main.impl.getUserByIdUser(idUser).pages_profile
         return getAllPagesByList(listIdPages)
     }
@@ -224,7 +231,11 @@ class UserRoutController(
         return main.impl.changeAvatarByUserId(idUser, pathToImage)
     }
 
-    suspend fun deleteAvatarByIdUser(idUser: String, avatarOld: String) {
+    fun deleteAvatarByIdUser(idUser: String, avatarOld: String) {
         File(avatarOld).delete()
+    }
+
+    suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession) {
+        new_messages.impl.watchForNewMessages(idUser, socket)
     }
 }

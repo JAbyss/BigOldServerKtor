@@ -7,7 +7,7 @@ import org.bson.types.ObjectId
 @Serializable
 data class ChatMessage(
     @BsonId
-    var id: String = ObjectId().toString(),
+    var _id: String = ObjectId().toString(),
     var author: String,
     var date: String,
     var message: String,

@@ -1,6 +1,7 @@
 package com.foggyskies.chat.databases.newmessage.datasources
 
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
+import io.ktor.websocket.*
 
 interface NewMessageCollectionDataSource {
 
@@ -15,4 +16,6 @@ interface NewMessageCollectionDataSource {
     suspend fun createCollection(idUser: String)
 
     suspend fun createDocument(idChat: String, idUser: String)
+
+    suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession)
 }

@@ -5,7 +5,7 @@ import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.model.ChatMainEntity
 import com.foggyskies.chat.data.model.ChatUserEntity
 import com.foggyskies.chat.data.model.ImpAndDB
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.extendfun.forEachSuspend
@@ -25,7 +25,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
 class MessagesRoutController(
-    private val main: ImpAndDB<AllCollectionImpl>,
+    private val main: ImpAndDB<MainDBImpl>,
     private val message: ImpAndDB<MessagesDBImpl>,
     private val new_message: ImpAndDB<NewMessagesDBImpl>
 ) : CheckTokenExist(main.db) {
@@ -54,30 +54,29 @@ class MessagesRoutController(
         members: ConcurrentHashMap<String, Member>,
         idChat: String
     ) {
-        members.values.forEach { member ->
-            val sdf = SimpleDateFormat("d MMM yyyy г. hh:mm:ss")
-            val currentDate = sdf.format(Date())
-            val messageEntity = ChatMessage(
-                listImages = message.listImages,
-                message = message.message,
-                author = senderUsername,
-                date = currentDate
-            )
+        val sdf = SimpleDateFormat("d MMM yyyy г. hh:mm:ss")
+        val currentDate = sdf.format(Date())
+        val messageEntity = ChatMessage(
+            listImages = message.listImages,
+            message = message.message,
+            author = senderUsername,
+            date = currentDate
+        )
 
-            val idReceiver =
-                if (chatEntity.firstCompanion?.nameUser != senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
+        val idReceiver =
+            if (chatEntity.firstCompanion?.nameUser != senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
 
-            if (members.keys.size == 1 && idReceiver.nameUser != senderUsername) {
-                if (main.impl.getStatusByIdUser(idReceiver.idUser) == "Не в сети")
-                    createNotification(senderUsername, idReceiver, message.message)
-                else {
-                    createInternalNotification(senderUsername, idReceiver, message.message)
-                    insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
-                }
-            } else {
-                insertOne(idChat, messageEntity)
+        if (members.keys.size == 1 && idReceiver.nameUser != senderUsername) {
+            if (main.impl.getStatusByIdUser(idReceiver.idUser) == "Не в сети")
+                createNotification(senderUsername, idReceiver, message.message)
+            else {
+                createInternalNotification(senderUsername, idReceiver, message.message)
+                insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
             }
-
+        } else {
+            insertOne(idChat, messageEntity)
+        }
+        members.values.forEach { member ->
             val parsedMessage = Json.encodeToString(messageEntity)
             member.socket.send(parsedMessage)
         }
@@ -112,6 +111,7 @@ class MessagesRoutController(
 
     private suspend fun insertNewMessage(idChat: String, idUser: String, message: ChatMessage) {
         new_message.impl.createCollection(idUser)
+        this.message.impl.createCollection(idChat)
         if (new_message.impl.checkOnExistDocument(idChat, idUser))
             new_message.impl.insertOneMessage(idChat, idUser, message)
         else {
@@ -181,7 +181,7 @@ class MessagesRoutController(
             file.mkdirs()
         }
         val idImage = ObjectId().toString()
-        val readyPath = "$originString/image_${idImage}.png"
+        val readyPath = "$originString/image_${idImage}.jpg"
         File(readyPath).writeBytes(image)
         return readyPath
     }
@@ -216,8 +216,6 @@ class MessagesRoutController(
 //    }
 //
 //}
-
-
 
 
 //class CheckInt {

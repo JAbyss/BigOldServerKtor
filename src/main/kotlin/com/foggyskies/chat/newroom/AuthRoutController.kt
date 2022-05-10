@@ -3,45 +3,45 @@ package com.foggyskies.chat.newroom
 import com.foggyskies.chat.data.model.RegistrationUserDC
 import com.foggyskies.chat.data.model.UserMainEntity
 import com.foggyskies.chat.data.model.UserNameID
-import com.foggyskies.chat.databases.main.AllCollectionImpl
+import com.foggyskies.chat.databases.main.MainDBImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import org.litote.kmongo.coroutine.CoroutineDatabase
 
 class AuthRoutController(
-    private val allCollectionImpl: AllCollectionImpl,
+    private val mainDBImpl: MainDBImpl,
     private val db: CoroutineDatabase
 ) {
 
     suspend fun getUserByUsername(username: String): UserMainEntity {
-        return allCollectionImpl.getUserByUsername(username)
+        return mainDBImpl.getUserByUsername(username)
     }
 
     suspend fun checkOnExistUser(username: String): Boolean {
-        return allCollectionImpl.checkOnExistUser(username)
+        return mainDBImpl.checkOnExistUser(username)
     }
 
     suspend fun createUser(user: RegistrationUserDC) {
-        allCollectionImpl.createUser(user)
+        mainDBImpl.createUser(user)
     }
 
     suspend fun checkOnExistTokenByUsername(username: String): Boolean {
-        return allCollectionImpl.checkOnExistTokenByUsername(username)
+        return mainDBImpl.checkOnExistTokenByUsername(username)
     }
 
     suspend fun createToken(user: UserNameID): Token {
-        allCollectionImpl.createToken(user)
-        return  allCollectionImpl.getTokenByUsername(user.username)
+        mainDBImpl.createToken(user)
+        return  mainDBImpl.getTokenByUsername(user.username)
     }
 
     suspend fun getToken(username: String): Token {
-        return allCollectionImpl.getTokenByUsername(username)
+        return mainDBImpl.getTokenByUsername(username)
     }
 
     suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean {
-        return allCollectionImpl.checkPasswordOnCorrect(username, password)
+        return mainDBImpl.checkPasswordOnCorrect(username, password)
     }
 
     suspend fun checkOnExistEmail(e_mail: String): Boolean {
-        return allCollectionImpl.checkOnExistEmail(e_mail)
+        return mainDBImpl.checkOnExistEmail(e_mail)
     }
 }

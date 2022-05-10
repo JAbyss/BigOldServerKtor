@@ -11,4 +11,6 @@ interface MessagesCollectionDataSource {
     suspend fun getFiftyMessage(idChat: String) : List<ChatMessage>
 
     suspend fun getLastMessage(idChat: String): String
+
+    suspend fun createCollection(idChat: String)
 }

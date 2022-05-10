@@ -17,6 +17,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.inject
+import java.nio.charset.StandardCharsets
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -81,6 +82,8 @@ fun Route.chatSessionRoutes() {
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
+//                Base64.getDecoder().decode(image.toString().toByteArray(StandardCharsets.UTF_8))
+//                Base64.getDecoder().decode(image.toString())
                 val decodedString = Base64.getDecoder().decode(image.toString())
                 val addressImage = routController.addImageToChat(idChat.toString(), decodedString)
                 call.respond(HttpStatusCode.OK, addressImage)

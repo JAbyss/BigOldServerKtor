@@ -4,9 +4,7 @@ import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.bettamodels.NotificationDocument
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.main.datasources.*
-import com.foggyskies.chat.databases.message.datasources.MessagesCollectionDataSource
 import com.foggyskies.chat.extendfun.forEachSuspend
-import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.jetbrains.handson.chat.server.chat.data.model.Token
 import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
 import io.ktor.http.cio.websocket.*
@@ -17,9 +15,9 @@ import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.coroutine.insertOne
+
 //MessagesCollectionDataSource
-class AllCollectionImpl(
+class MainDBImpl(
     private val db: CoroutineDatabase
 ) : UsersCollectionDataSource, ChatsCollectionDataSource, FriendsCollectionDataSource,
     RequestsFriendsCollectionDataSource, TokenCollectionDataSource,
