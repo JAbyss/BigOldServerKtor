@@ -484,6 +484,16 @@ class MainDBImpl(
         db.getCollection<PageProfileDC>("pages_profile").deleteOne(PageProfileDC::id eq idPage)
     }
 
+    override suspend fun getAvatarPageProfile(idPage: String): String {
+        return db.getCollection<PageProfileDC>("pages_profile").findOne(PageProfileDC::id eq idPage)?.image ?: ""
+    }
+
+    override suspend fun changeAvatarByIdPage(idPage: String, pathToImage: String): String {
+        db.getCollection<PageProfileDC>("pages_profile")
+            .findOneAndUpdate(PageProfileDC::id eq idPage, setValue(PageProfileDC::image, pathToImage))?.image
+        return pathToImage
+    }
+
     override suspend fun getAvatarByIdUser(idUser: String): String {
         return db.getCollection<AvatarDC>("avatars").findOne(AvatarDC::idUser eq idUser)?.image ?: ""
     }

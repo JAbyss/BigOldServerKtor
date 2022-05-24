@@ -15,13 +15,5 @@ interface TokenCollectionDataSource {
 
     suspend fun getTokenByToken(token: String): Token
 
-//    suspend fun delTokenByIdUser(idUser: String)
-//
-//    suspend fun delTokenByUsername(username: String)
-
     suspend fun getTokenByUsername(username: String): Token
-
-//    suspend fun getTokenByIdUser(idUser: String): String
-
-//    suspend fun getTokenByUserNameID(user: UserNameID): String
 }

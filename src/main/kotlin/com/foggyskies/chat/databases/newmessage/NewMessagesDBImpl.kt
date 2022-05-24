@@ -1,17 +1,15 @@
 package com.foggyskies.chat.databases.newmessage
 
-import com.foggyskies.chat.data.model.RequestFriendDC
-import com.foggyskies.chat.data.model.UserIUSI
-import com.foggyskies.chat.data.model.UserNameID
 import com.foggyskies.chat.databases.newmessage.datasources.NewMessageCollectionDataSource
 import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
 import com.mongodb.MongoCommandException
 import com.mongodb.client.model.changestream.OperationType
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.reactive.collect
 import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.bson.BsonString
 import org.bson.codecs.pojo.annotations.BsonId
 import org.litote.kmongo.addToSet
 import org.litote.kmongo.coroutine.CoroutineCollection
@@ -35,7 +33,7 @@ class NewMessagesDBImpl(
         return getCollection(idUser).findOne(NewMessagesCollection::id eq idChat) != null
     }
 
-    override suspend fun getAllNewMessages(idChat: String, idUser: String): List<ChatMessage> {
+    override suspend fun getNewMessagesByIdChat(idChat: String, idUser: String): List<ChatMessage> {
         return getCollection(idUser).findOne(NewMessagesCollection::id eq idChat)?.new_messages ?: emptyList()
     }
 
@@ -63,7 +61,8 @@ class NewMessagesDBImpl(
     override suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession) {
         val newMessages = getCollection(idUser).watch<NewMessagesCollection>()
 
-        var oldList = emptyList<ChatMessage>()
+        val oldMapNewMessages = getCollection(idUser).find().toList().toMutableList()
+//            mutableListOf<NewMessagesCollection>()
 
         newMessages.consumeEach { item ->
             if (item.operationType == OperationType.INSERT || item.operationType == OperationType.UPDATE)
@@ -71,20 +70,52 @@ class NewMessagesDBImpl(
                 if (item.updateDescription != null) {
                     val updatedFields =
                         Json.decodeFromString<List<ChatMessage>>(item.updateDescription.updatedFields["new_messages"]?.asArray()?.values.toString())
-                    if (updatedFields.size > oldList.size) {
-                        val formattedList = updatedFields - oldList
-                        println("REQUEST 1 $formattedList")
+                    val idDocument = (item.documentKey[item.documentKey.firstKey] as BsonString).value
+                    val newMessagesCollection = NewMessagesCollection(
+                        id = idDocument,
+                        new_messages = updatedFields
+                    )
+                    Json.encodeToString(newMessagesCollection)
+
+                    var isIdExist = false
+                    var changeIndex: Int? = null
+
+                    oldMapNewMessages.forEachIndexed { index, oldMap ->
+                        if (oldMap.id == newMessagesCollection.id) {
+                            isIdExist = true
+                            changeIndex = index
+                            if (updatedFields.size > oldMap.new_messages.size) {
+                                val newValues = updatedFields - oldMap.new_messages.toSet()
+                                val newMessagesCollectionFormatted = NewMessagesCollection(
+                                    id = idDocument,
+                                    new_messages = newValues
+                                )
+                                println("REQUEST 01 $newMessagesCollectionFormatted")
+
+                                socket.send(Frame.Text("getNewMessages|${newMessagesCollectionFormatted.json}"))
+                            }
+                        }
                     }
-                    oldList = updatedFields
 
-                    //                    socket.send(Frame.Text("getRequestsFriends|${updatedFields.json}"))
+                    if (!isIdExist) {
+                        oldMapNewMessages.add(newMessagesCollection)
+                        println("REQUEST 02 $newMessagesCollection")
+                        socket.send(Frame.Text("getNewMessages|${newMessagesCollection.json}"))
+                    }
+
+                    changeIndex?.let {
+                        oldMapNewMessages[it] = newMessagesCollection
+                    }
+                    println("REQUEST 1 $oldMapNewMessages")
                 } else {
-                    val json = Json.decodeFromString<List<ChatMessage>>(item.fullDocument.new_messages.json)
-
-                    println("REQUEST 3 $json")
-                    //                    socket.send(Frame.Text("getRequestsFriends|${json.json}"))
+//                    val json = Json.decodeFromString<List<ChatMessage>>(item.fullDocument.json /**.new_messages.json*/)
+                    println("REQUEST 2")
                 }
         }
+    }
+
+    override suspend fun getAllNewMessages(idUser: String): List<NewMessagesCollection> {
+        return getCollection(idUser).find().toList()
     }
 }
 

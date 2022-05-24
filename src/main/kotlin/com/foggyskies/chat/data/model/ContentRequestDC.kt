@@ -21,7 +21,8 @@ data class NewContentDC(
             type = type,
             likes = emptyList(),
             comments = emptyList(),
-            address = nameFile
+            address = nameFile,
+            description = description
         )
     }
 }

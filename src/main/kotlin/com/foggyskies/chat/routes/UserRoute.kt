@@ -5,6 +5,7 @@ import com.foggyskies.chat.data.model.PageProfileDC
 import com.foggyskies.chat.data.model.UserNameID
 import com.foggyskies.chat.extendfun.isTrue
 import com.foggyskies.chat.newroom.UserRoutController
+import com.foggyskies.plugin.SystemRouting
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
@@ -22,8 +23,9 @@ import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import org.koin.ktor.ext.inject
 import java.io.File
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.*
-import kotlin.math.round
 
 private var sessionsMainSockets = ConcurrentList<String>()
 
@@ -42,13 +44,12 @@ fun Route.usersRoutes() {
 //                    sessionsMainSockets.remove(idUser)
                     return@webSocket
                 }
-
                 val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
                 val isTokenExist = routController.checkOnExistToken(token.toString())
 
                 val map_actions = mapOf(
                     "getFriends" to suspend { "getFriends|${Json.encodeToString(routController.getFriends(token.toString()))}" },
-                    "getChats" to suspend { "getFriends|${Json.encodeToString(routController.getChats(token.toString()))}" },
+//                    "getChats" to suspend { "getFriends|${Json.encodeToString(routController.getChats(token.toString()))}" },
                     "getRequestsFriends" to suspend {
                         "getRequestsFriends|${
                             Json.encodeToString(
@@ -69,6 +70,9 @@ fun Route.usersRoutes() {
                                 )
                             )
                         }"
+                    },
+                    "getNewMessages" to suspend {
+                        "getNewMessages|${Json.encodeToString(routController.getAllNewMessages(idUser))}"
                     }
                 )
                 val map_action_unit = mapOf(
@@ -76,8 +80,6 @@ fun Route.usersRoutes() {
                     "deleteAllSentNotifications" to suspend { routController.deleteAllSentNotifications(idUser) }
 //            "acceptRequestFriend" to suspend { roomUserController.acceptRequestFriend() }
                 )
-
-
 
                 if (isTokenExist) {
                     routController.setStatusUser(idUser, "В сети")
@@ -156,13 +158,6 @@ fun Route.usersRoutes() {
         files(".")
     }
 
-//    get("/images/{name_image}") {
-//        val name_image = call.parameters["name_image"] ?: call.respond(HttpStatusCode.BadRequest, "Картинка не указана")
-//
-//        val file = File("images/$name_image")
-//        call.respondFile(file)
-//    }
-
     post("/createPageProfile") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
         val isTokenExist = routController.checkOnExistToken(token.toString())
@@ -170,16 +165,23 @@ fun Route.usersRoutes() {
         val page = call.receive<PageProfileDC>()
 
         if (isTokenExist) {
+            val objectId = ObjectId().toString()
 
+            val pathString = "${SystemRouting.Images.BASE_DIR}/${SystemRouting.Images.profiles_avatars}"
+            val path = Paths.get(pathString)
             val decodedString = Base64.getDecoder().decode(page.image)
-            val countFiles = File("images/").list().size + 1
-            File("images/image_profile_$countFiles.jpg").writeBytes(decodedString)
+            val file = File(pathString)
+            if (!Files.exists(path)) {
+                file.mkdirs()
+            }
+            val readyPath = "$pathString/image_$objectId.jpg"
+            File(readyPath).writeBytes(decodedString)
 
             val user = routController.getUserByToken(token.toString())
 
             routController.addOnePage(
                 user.idUser,
-                page.copy(id = ObjectId().toString(), image = "image_profile_$countFiles.jpg")
+                page.copy(id = ObjectId().toString(), image = readyPath)
             )
 
             call.respond(HttpStatusCode.OK, "Страница создана")
@@ -309,7 +311,7 @@ fun Route.usersRoutes() {
         }
     }
 
-    post ("/changeAvatar") {
+    post("/changeAvatar") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
 
 //        val image = call.parameters["image"] ?: call.respond(HttpStatusCode.BadRequest, "Image не получен.")
@@ -324,7 +326,7 @@ fun Route.usersRoutes() {
             val avatarOld = routController.getAvatarByIdUser(idUser)
 
             if (avatarOld.isNotEmpty()) {
-                routController.deleteAvatarByIdUser(idUser, avatarOld)
+                routController.deleteAvatarByIdUser(avatarOld)
             }
 
             val decodedString = Base64.getDecoder().decode(image.toString())
@@ -348,6 +350,34 @@ fun Route.usersRoutes() {
 //            val otherUser = routController.getUserByIdUser(idOtherUser.toString())
             val listPages = routController.getAllPagesByIdUser(idOtherUser.toString())
             call.respond(HttpStatusCode.OK, listPages)
+        } else {
+            call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+        }
+    }
+
+    post("/changeAvatarProfile") {
+        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val idPage = call.request.headers["idPage"] ?: ""
+//        val image = call.parameters["image"] ?: call.respond(HttpStatusCode.BadRequest, "Image не получен.")
+
+        val image = call.receiveText()
+
+        val isTokenExist = routController.checkOnExistToken(token.toString())
+
+        if (isTokenExist) {
+//            val idUser = routController.getUserByToken(token.toString()).idUser
+
+            val avatarOld = routController.getAvatarPageProfile(idPage)
+
+            if (avatarOld.isNotEmpty()) {
+                routController.deleteAvatarByIdUser(avatarOld)
+            }
+
+            val decodedString = Base64.getDecoder().decode(image)
+            val name = ObjectId().toString()
+            File("images/profiles_avatar/image_${name}.jpg").writeBytes(decodedString)
+            val avatar = routController.changeAvatarByIdPage(idPage, "images/profiles_avatar/image_$name.jpg")
+            call.respond(HttpStatusCode.OK, avatar)
         } else {
             call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
         }

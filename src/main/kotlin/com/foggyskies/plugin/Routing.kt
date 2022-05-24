@@ -5,7 +5,6 @@ import io.ktor.application.*
 import io.ktor.routing.*
 
 fun Application.configureRouting() {
-//    val roomUserController by inject<UserRoomController>()
 
     install(Routing) {
         usersRoutes()
@@ -13,7 +12,6 @@ fun Application.configureRouting() {
         createChatRoutes()
         chatSessionRoutes()
         notificationRoutes()
-//        chatListRoutes()
         photoRouting()
         contentRoute()
     }

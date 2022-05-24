@@ -28,6 +28,12 @@ data class ContentUsersDC(
             isLiked = likes.contains(idUser)
         )
     }
+    fun toContentPreview(): ContentPreviewDC {
+        return ContentPreviewDC(
+            id = id,
+            address = address
+        )
+    }
 }
 
 @Serializable

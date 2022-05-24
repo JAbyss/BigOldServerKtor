@@ -4,6 +4,7 @@ import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
 import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.newmessage.NewMessagesCollection
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
 import com.jetbrains.handson.chat.server.chat.data.model.Token
@@ -231,11 +232,23 @@ class UserRoutController(
         return main.impl.changeAvatarByUserId(idUser, pathToImage)
     }
 
-    fun deleteAvatarByIdUser(idUser: String, avatarOld: String) {
+    suspend fun changeAvatarByIdPage(idPage: String, pathToImage: String): String {
+        return main.impl.changeAvatarByIdPage(idPage, pathToImage)
+    }
+
+    fun deleteAvatarByIdUser(avatarOld: String) {
         File(avatarOld).delete()
     }
 
     suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession) {
         new_messages.impl.watchForNewMessages(idUser, socket)
+    }
+
+    suspend fun getAllNewMessages(idUser: String): List<NewMessagesCollection> {
+        return new_messages.impl.getAllNewMessages(idUser)
+    }
+
+    suspend fun getAvatarPageProfile(idPage: String): String {
+        return main.impl.getAvatarPageProfile(idPage)
     }
 }

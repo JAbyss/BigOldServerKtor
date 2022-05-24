@@ -25,8 +25,9 @@ fun Route.contentRoute() {
             val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
-                routController.addNewContent(post)
-                call.respond(HttpStatusCode.OK, "Новый контент добавлен")
+                routController.addNewContent(post, callback = {
+                    call.respond(HttpStatusCode.OK, it)
+                })
             } else {
                 call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
             }

@@ -12,4 +12,7 @@ interface PagesProfileDataSource {
 
     suspend fun deletePage(idPage: String)
 
+    suspend fun getAvatarPageProfile(idPage: String): String
+
+    suspend fun changeAvatarByIdPage(idPage: String, pathToImage: String): String
 }

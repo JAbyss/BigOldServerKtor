@@ -67,9 +67,10 @@ class MessagesRoutController(
             if (chatEntity.firstCompanion?.nameUser != senderUsername) chatEntity.firstCompanion!! else chatEntity.secondCompanion!!
 
         if (members.keys.size == 1 && idReceiver.nameUser != senderUsername) {
-            if (main.impl.getStatusByIdUser(idReceiver.idUser) == "Не в сети")
+            if (main.impl.getStatusByIdUser(idReceiver.idUser) == "Не в сети") {
                 createNotification(senderUsername, idReceiver, message.message)
-            else {
+                insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
+            } else {
                 createInternalNotification(senderUsername, idReceiver, message.message)
                 insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
             }
@@ -100,12 +101,18 @@ class MessagesRoutController(
                 socket.send(json)
             }
             val user = main.impl.getUserByUsername(username)
-            getNewMessages(chatEntity.idChat, user.idUser, callBack = { listNewMessages ->
-                listNewMessages.forEachSuspend { _message ->
+            getNewMessagesCompanion(chatEntity.idChat, user.idUser, callBack = { listNewMessagesCompanion ->
+                listNewMessagesCompanion.forEachSuspend { _message ->
                     val json = Json.encodeToString(_message)
                     socket.send(json)
                 }
             })
+//            getNewMessages(chatEntity.idChat, user.idUser, callBack = { listNewMessages ->
+//                listNewMessages.forEachSuspend { _message ->
+//                    val json = Json.encodeToString(_message)
+//                    socket.send(json)
+//                }
+//            })
         }
     }
 
@@ -120,8 +127,15 @@ class MessagesRoutController(
         }
     }
 
+    private suspend fun getNewMessagesCompanion(idChat: String, idUser: String, callBack: suspend (List<ChatMessage>) -> Unit){
+        val usersChat = main.impl.getChatById(idChat)
+        val companionUser = if (usersChat.firstCompanion?.idUser != idUser) usersChat.firstCompanion!! else usersChat.secondCompanion!!
+        val new_messages = new_message.impl.getNewMessagesByIdChat(idChat, companionUser.idUser)
+        callBack(new_messages)
+    }
+
     private suspend fun getNewMessages(idChat: String, idUser: String, callBack: suspend (List<ChatMessage>) -> Unit) {
-        val new_messages = new_message.impl.getAllNewMessages(idChat, idUser)
+        val new_messages = new_message.impl.getNewMessagesByIdChat(idChat, idUser)
         callBack(new_messages)
         coroutineScope {
             new_messages.forEach { newMess ->

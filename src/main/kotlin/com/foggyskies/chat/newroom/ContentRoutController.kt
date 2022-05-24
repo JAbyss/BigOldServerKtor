@@ -16,13 +16,14 @@ class ContentRoutController(
         return content.impl.getFirstFiftyContent(idPageProfile)
     }
 
-    suspend fun addNewContent(item: ContentRequestDC) {
+    suspend fun addNewContent(item: ContentRequestDC, callback: suspend (ContentPreviewDC) -> Unit) {
         val decodedString = Base64.getDecoder().decode(item.item.value)
         val countFiles = File("images/").list().size + 1
         val nameFile = "images/image_content_$countFiles.jpg"
         File(nameFile).writeBytes(decodedString)
-
-        content.impl.addNewContent(item.idPageProfile, item.item.toNewPost(nameFile))
+        val newPostReady = item.item.toNewPost(nameFile)
+        callback(newPostReady.toContentPreview())
+        content.impl.addNewContent(item.idPageProfile, newPostReady)
     }
 
     suspend fun deleteContent(idPageProfile: String, idContent: String) {
