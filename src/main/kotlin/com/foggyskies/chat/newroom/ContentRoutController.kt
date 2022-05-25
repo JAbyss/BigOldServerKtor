@@ -6,6 +6,7 @@ import com.foggyskies.chat.databases.main.MainDBImpl
 import org.litote.kmongo.eq
 import java.io.File
 import java.util.*
+import kotlin.collections.HashMap
 
 class ContentRoutController(
     private val content: ImpAndDB<ContentImpl>,
@@ -37,7 +38,8 @@ class ContentRoutController(
     suspend fun getAllLikedUsers(idPageProfile: String, idPost: String): List<UserIUSI> {
         val likesList = content.impl.getAllLikedUsers(idPageProfile, idPost)
         return likesList.map { idUser ->
-            main.impl.getUserByIdUser(idUser).toUserIUSI()
+            val image = main.impl.getAvatarByIdUser(idUser)
+            main.impl.getUserByIdUser(idUser).toUserIUSI().copy(image = image)
         }
     }
 
@@ -46,16 +48,16 @@ class ContentRoutController(
     }
 
     suspend fun getPosts(token: String): List<SelectedPostWithIdPageProfile> {
-        val listPosts = content.db.getCollection<ContentUsersDC>("content_6255505f294a832807980ce6").find().toList()
+        val listPosts = content.db.getCollection<ContentUsersDC>("content_6283b897d249eb7a90167baa").find().toList()
         val idUser = main.impl.getTokenByToken(token).idUser
         val newList = listPosts.map {
             SelectedPostWithIdPageProfile(
-                idPageProfile = "6255505f294a832807980ce6",
+                idPageProfile = "6283b897d249eb7a90167baa",
                 item = ContentPreviewDC(
                     id = it.id,
                     address = it.address
                 ),
-                image = "images/image_profile_4.jpg",
+                image = "images/profiles_avatar/image_628a789c95044864e0b9e6b5.jpg",
                 author = "Test",
                 countComets = it.comments.size.toString(),
                 countLikes = it.likes.size.toString(),
@@ -68,8 +70,39 @@ class ContentRoutController(
         return newList
     }
 
-    suspend fun getOnePostComments(idPageProfile: String, idPost: String): List<CommentDC> {
-        return content.impl.getOnePostComments(idPageProfile, idPost)
+    @kotlinx.serialization.Serializable
+    data class FormattedCommentDC(
+        val users: HashMap<String, UserIUSI>,
+        val comments: List<CommentDC>
+    )
+
+//    data class FormattedCommentDC(
+//        val id: String,
+//        val idUser: String,
+//        val message: String,
+//        val date: String,
+////        val image: String,
+////        val username: String
+//    )
+
+    suspend fun getOnePostComments(idPageProfile: String, idPost: String): FormattedCommentDC {
+        val idsAndUsername = hashMapOf<String, UserIUSI>()
+
+
+        val listComments = content.impl.getOnePostComments(idPageProfile, idPost)
+        listComments.forEach { comment ->
+            if (!idsAndUsername.containsKey(comment.idUser)) {
+                val user = main.impl.getUserByIdUser(comment.idUser).toUserIUSI()
+                val image = main.impl.getAvatarByIdUser(comment.idUser)
+                idsAndUsername[comment.idUser] = user.copy(image = image)
+            }
+        }
+        val formattedCommentDC = FormattedCommentDC(
+            users = idsAndUsername,
+            comments = listComments
+        )
+
+        return formattedCommentDC
     }
 
     suspend fun addLikeToPost(idPageProfile: String, idPost: String, token: String): Boolean {
@@ -85,7 +118,11 @@ class ContentRoutController(
         }
     }
 
-    suspend fun getInfoAboutOnePost(idPageProfile: String, idPost: String, token: String): SelectedPostWithIdPageProfile?{
+    suspend fun getInfoAboutOnePost(
+        idPageProfile: String,
+        idPost: String,
+        token: String
+    ): SelectedPostWithIdPageProfile? {
         val idUser = main.impl.getTokenByToken(token).idUser
         return content.impl.getInfoAboutOnePost(idPageProfile, idPost)
             ?.toSelectedPostWithIdPageProfile(idPageProfile, idUser)
