@@ -1,0 +1,22 @@
+package com.foggyskies.chat.extendfun
+
+fun getSizeFile(size: Long): String {
+        if (size > 8) {
+            val bytes = size / 8f
+            if (bytes > 1024) {
+                val kBytes = bytes / 1024f
+                if (kBytes > 1024) {
+                    val mBytes = kBytes / 1024f
+                    if (mBytes > 1024)
+                        return "${String.format("%.1f", mBytes / 1024f)} GB"
+                    else
+                        return "${String.format("%.1f", mBytes)} MB"
+                } else
+                    return "${String.format("%.1f", kBytes)} KB"
+            } else
+                return "${String.format("%.1f", bytes)} B"
+        } else if (size == 0L)
+            return "0 Bit"
+        else
+            return "${String.format("%.1f", size)} Bit"
+    }
