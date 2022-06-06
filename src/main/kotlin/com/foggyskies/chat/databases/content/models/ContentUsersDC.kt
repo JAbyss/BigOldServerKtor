@@ -12,7 +12,7 @@ data class ContentUsersDC(
     var likes: List<String>,
     var comments: List<CommentDC>,
     var address: String,
-    var description: String = ""
+    var description: String
 ){
     fun toSelectedPostWithIdPageProfile(idPageProfile: String, idUser: String): SelectedPostWithIdPageProfile {
         return SelectedPostWithIdPageProfile(
@@ -23,6 +23,7 @@ data class ContentUsersDC(
             ),
             image = "",
             author = "",
+            description = description,
             countComets = comments.size.toString(),
             countLikes = likes.size.toString(),
             isLiked = likes.contains(idUser)
