@@ -1,26 +1,34 @@
 package com.foggyskies.chat.newroom
 
 
+import com.foggyskies.ServerDate
 import com.foggyskies.chat.data.bettamodels.Notification
-import com.foggyskies.chat.data.model.ChatMainEntity
+import com.foggyskies.chat.data.model.ChatSession
 import com.foggyskies.chat.data.model.ChatUserEntity
 import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.main.MainDBImpl
+import com.foggyskies.chat.databases.main.models.ChatMainEntity
+import com.foggyskies.chat.databases.main.models.ChatMainEntity_
 import com.foggyskies.chat.databases.message.MessagesDBImpl
+import com.foggyskies.chat.databases.message.models.ChatMessageCollection
+import com.foggyskies.chat.databases.message.models.ChatMessageDC
+import com.foggyskies.chat.databases.message.models.FileDC
+import com.foggyskies.chat.databases.message.models.MessageDC
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.extendfun.forEachSuspend
-import com.foggyskies.chat.routes.MessageDC
-import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
+import com.foggyskies.chat.extendfun.getSizeFile
+import com.foggyskies.chat.routes.DeleteMessageEntity
 import com.jetbrains.handson.chat.server.chat.data.model.Member
 import io.ktor.http.cio.websocket.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bson.types.ObjectId
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.text.SimpleDateFormat
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
@@ -30,37 +38,76 @@ class MessagesRoutController(
     private val new_message: ImpAndDB<NewMessagesDBImpl>
 ) : CheckTokenExist(main.db) {
 
-    lateinit var chatEntity: ChatMainEntity
+    suspend fun getChat(idChat: String): ChatMainEntity = main.impl.getChatById(idChat)
 
-    suspend fun initChat(idChat: String) {
-        chatEntity = main.impl.getChatById(idChat)
-    }
-
-    private suspend fun insertOne(idChat: String, message: ChatMessage) {
+    private suspend fun insertOne(idChat: String, message: ChatMessageCollection) {
         this.message.impl.insertOne(idChat, message)
     }
 
-    suspend fun getAllMessages(idChat: String): List<ChatMessage> {
+    suspend fun getAllMessages(idChat: String): List<ChatMessageCollection> {
         return message.impl.getAllMessages(idChat)
     }
 
-    private suspend fun getFiftyMessage(idChat: String): List<ChatMessage> {
-        return message.impl.getFiftyMessage(idChat)
+    private suspend fun getFiftyMessage(chatEntity: ChatMainEntity): List<ChatMessageDC> {
+        val listMessages = message.impl.getFiftyMessage(chatEntity.idChat)
+        return listMessages.map {
+            ChatMessageDC(
+                id = it.id,
+                idUser = it.idUser,
+                author = if (it.idUser == chatEntity.firstCompanion?.idUser!!)
+                    chatEntity.firstCompanion?.nameUser!!
+                else
+                    chatEntity.secondCompanion?.nameUser!!,
+                date = it.date,
+                message = it.message,
+                listImages = it.listImages,
+                listFiles = it.listFiles
+            )
+        }
+    }
+
+    private suspend fun getNextMessage(chatEntity: ChatMainEntity, lastMessageId: String): List<ChatMessageDC> {
+        val listMessages = message.impl.getNextMessages(chatEntity.idChat, lastMessageId)
+        return listMessages.map {
+            ChatMessageDC(
+                id = it.id,
+                idUser = it.idUser,
+                author = if (it.idUser == chatEntity.firstCompanion?.idUser!!)
+                    chatEntity.firstCompanion?.nameUser!!
+                else
+                    chatEntity.secondCompanion?.nameUser!!,
+                date = it.date,
+                message = it.message,
+                listImages = it.listImages,
+                listFiles = it.listFiles
+            )
+        }
+    }
+
+    suspend fun sendNextMessages(socket: WebSocketSession, chatEntity: ChatMainEntity, lastMessageId: String) {
+        val messages = getNextMessage(chatEntity, lastMessageId)
+//        messages.forEach { _message ->
+//            val json = Json.encodeToString(_message)
+//            socket.send("nextMessages|$json")
+//        }
+        val json = Json.encodeToString(messages)
+        socket.send("nextMessages|$json")
     }
 
     suspend fun sendMessage(
+        idUser: String,
         senderUsername: String,
         message: MessageDC,
         members: ConcurrentHashMap<String, Member>,
-        idChat: String
+        chatEntity: ChatMainEntity
     ) {
-        val sdf = SimpleDateFormat("d MMM yyyy г. hh:mm:ss")
-        val currentDate = sdf.format(Date())
-        val messageEntity = ChatMessage(
+
+        val messageEntity = ChatMessageCollection(
+            listFiles = message.listFiles,
             listImages = message.listImages,
             message = message.message,
-            author = senderUsername,
-            date = currentDate
+            idUser = idUser,
+            date = ServerDate.fullDate
         )
 
         val idReceiver =
@@ -68,55 +115,102 @@ class MessagesRoutController(
 
         if (members.keys.size == 1 && idReceiver.nameUser != senderUsername) {
             if (main.impl.getStatusByIdUser(idReceiver.idUser) == "Не в сети") {
-                createNotification(senderUsername, idReceiver, message.message)
+                createNotification(senderUsername, idReceiver, message.message, chatEntity)
                 insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
             } else {
-                createInternalNotification(senderUsername, idReceiver, message.message)
-                insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
+//                val chat = main.impl.getChatById(idChat)
+                val (receiverCompanion, nameField) =
+                    if (chatEntity.firstCompanion?.idUser != idUser)
+                        Pair(chatEntity.firstCompanion!!, ChatMainEntity_.FirstCompanion)
+                    else
+                        Pair(chatEntity.secondCompanion!!, ChatMainEntity_.SecondCompanion)
+
+                if (receiverCompanion.notifiable.isEmpty())
+                    insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
+//                createInternalNotification(senderUsername, idReceiver, message.message)
+                else {
+                    val timeMute = idReceiver.notifiable.toInt()
+                    if (ServerDate.muteDate.toInt() > timeMute) {
+                        // Размут
+                        main.impl.muteChat(chatEntity.idChat, idReceiver.idUser, nameField = nameField)
+                        insertNewMessage(chatEntity.idChat, idReceiver.idUser, messageEntity)
+                    }
+                }
             }
         } else {
-            insertOne(idChat, messageEntity)
+            insertOne(chatEntity.idChat, messageEntity)
         }
         members.values.forEach { member ->
-            val parsedMessage = Json.encodeToString(messageEntity)
+            val parsedMessage = Json.encodeToString(
+                ChatMessageDC(
+                    id = messageEntity.id,
+                    idUser = messageEntity.idUser,
+                    message = messageEntity.message,
+                    listImages = messageEntity.listImages,
+                    listFiles = messageEntity.listFiles,
+                    date = messageEntity.date,
+                    author = senderUsername
+                )
+            )
             member.socket.send(parsedMessage)
         }
     }
 
+    suspend fun getIdUserByToken(token: String): String {
+        return main.impl.getTokenByToken(token).idUser
+    }
+
     suspend fun onJoin(
+        idUser: String,
         username: String,
         sessionId: String,
         socket: WebSocketSession,
-        members: ConcurrentHashMap<String, Member>
+        members: ConcurrentHashMap<String, Member>,
+        chatEntity: ChatMainEntity
     ) {
         if (!members.containsKey(username)) {
             members[username] = Member(
+                idUser = idUser,
                 username = username,
                 sessionId = sessionId,
                 socket = socket
             )
-            val messages = getFiftyMessage(chatEntity.idChat)
+            val messages = getFiftyMessage(chatEntity)
             messages.forEachSuspend { _message ->
                 val json = Json.encodeToString(_message)
                 socket.send(json)
             }
+            val myNewMessage =
+                if (chatEntity.firstCompanion?.idUser == idUser) chatEntity.secondCompanion else chatEntity.firstCompanion
             val user = main.impl.getUserByUsername(username)
-            getNewMessagesCompanion(chatEntity.idChat, user.idUser, callBack = { listNewMessagesCompanion ->
-                listNewMessagesCompanion.forEachSuspend { _message ->
+            getNewMessagesCompanion(
+                chatEntity.idChat,
+                myNewMessage?.idUser!!,
+                chatEntity,
+                callBack = { listNewMessagesCompanion ->
+                    listNewMessagesCompanion.forEachSuspend { _message ->
+                        val json = Json.encodeToString(_message)
+                        socket.send(json)
+                    }
+                })
+            getNewMessages(chatEntity.idChat, idUser, chatEntity, callBack = { listNewMessages ->
+                listNewMessages.forEachSuspend { _message ->
                     val json = Json.encodeToString(_message)
+//                    socket.send("newMessage|$json")
                     socket.send(json)
                 }
             })
-//            getNewMessages(chatEntity.idChat, user.idUser, callBack = { listNewMessages ->
-//                listNewMessages.forEachSuspend { _message ->
-//                    val json = Json.encodeToString(_message)
-//                    socket.send(json)
-//                }
-//            })
         }
     }
 
-    private suspend fun insertNewMessage(idChat: String, idUser: String, message: ChatMessage) {
+    suspend fun tryDisconnect(username: String, members: ConcurrentHashMap<String, Member>) {
+        members[username]?.socket?.close()
+        if (members.containsKey(username)) {
+            members.remove(username)
+        }
+    }
+
+    private suspend fun insertNewMessage(idChat: String, idUser: String, message: ChatMessageCollection) {
         new_message.impl.createCollection(idUser)
         this.message.impl.createCollection(idChat)
         if (new_message.impl.checkOnExistDocument(idChat, idUser))
@@ -127,16 +221,43 @@ class MessagesRoutController(
         }
     }
 
-    private suspend fun getNewMessagesCompanion(idChat: String, idUser: String, callBack: suspend (List<ChatMessage>) -> Unit){
-        val usersChat = main.impl.getChatById(idChat)
-        val companionUser = if (usersChat.firstCompanion?.idUser != idUser) usersChat.firstCompanion!! else usersChat.secondCompanion!!
-        val new_messages = new_message.impl.getNewMessagesByIdChat(idChat, companionUser.idUser)
-        callBack(new_messages)
+    private suspend fun getNewMessagesCompanion(
+        idChat: String,
+        idUser: String,
+        chatEntity: ChatMainEntity,
+        callBack: suspend (List<ChatMessageDC>) -> Unit
+    ) {
+//        val usersChat = main.impl.getChatById(idChat)
+//        val companionUser =
+//            if (usersChat.firstCompanion?.idUser != idUser) usersChat.firstCompanion!! else usersChat.secondCompanion!!
+        val new_messages = new_message.impl.getNewMessagesByIdChat(idChat, idUser)
+
+        callBack(new_messages.map {
+            it.toCMDC().copy(
+                author = if (it.idUser == chatEntity.firstCompanion?.idUser!!)
+                    chatEntity.firstCompanion?.nameUser!!
+                else
+                    chatEntity.secondCompanion?.nameUser!!,
+            )
+        })
     }
 
-    private suspend fun getNewMessages(idChat: String, idUser: String, callBack: suspend (List<ChatMessage>) -> Unit) {
+    private suspend fun getNewMessages(
+        idChat: String,
+        idUser: String,
+        chatEntity: ChatMainEntity,
+        callBack: suspend (List<ChatMessageDC>) -> Unit
+    ) {
         val new_messages = new_message.impl.getNewMessagesByIdChat(idChat, idUser)
-        callBack(new_messages)
+
+        callBack(new_messages.map {
+            it.toCMDC().copy(
+                author = if (it.idUser == chatEntity.firstCompanion?.idUser!!)
+                    chatEntity.firstCompanion?.nameUser!!
+                else
+                    chatEntity.secondCompanion?.nameUser!!,
+            )
+        })
         coroutineScope {
             new_messages.forEach { newMess ->
                 message.impl.insertOne(idChat, newMess)
@@ -145,7 +266,12 @@ class MessagesRoutController(
         }
     }
 
-    private suspend fun createNotification(senderUsername: String, receiver: ChatUserEntity, message: String) {
+    private suspend fun createNotification(
+        senderUsername: String,
+        receiver: ChatUserEntity,
+        message: String,
+        chatEntity: ChatMainEntity
+    ) {
         val isExistDocument = main.impl.checkOnExistNotificationDocument(receiver.idUser)
 
         val senderUser =
@@ -166,7 +292,12 @@ class MessagesRoutController(
             main.impl.addNotification(receiver.idUser, notification)
     }
 
-    private suspend fun createInternalNotification(senderUsername: String, receiver: ChatUserEntity, message: String) {
+    private suspend fun createInternalNotification(
+        senderUsername: String,
+        receiver: ChatUserEntity,
+        message: String,
+        chatEntity: ChatMainEntity
+    ) {
         val isExistDocument = main.impl.checkOnExistInternalNotificationDocument(receiver.idUser)
 
         val senderUser =
@@ -199,7 +330,79 @@ class MessagesRoutController(
         File(readyPath).writeBytes(image)
         return readyPath
     }
+
+    suspend fun deleteMessage(deleteMessageDC: DeleteMessageEntity): Int {
+        return if (message.impl.deleteMessage(deleteMessageDC.idChat, deleteMessageDC.idMessage) == 0)
+            new_message.impl.deleteNewMessage(deleteMessageDC.idUser, deleteMessageDC.idChat, deleteMessageDC.idMessage)
+        else
+            1
+    }
+
+    suspend fun checkOnExistFile() {
+
+    }
+
+    suspend fun loadFile(
+        idChat: String,
+        typeFile: String,
+        contentFile: String,
+        nameFile: String,
+        status: String,
+        idUser: String,
+        session: ChatSession,
+        members: ConcurrentHashMap<String, Member>,
+        chatEntity: ChatMainEntity
+    ) {
+
+
+        if (!fileInLoads.containsKey(nameFile)){
+            val name = UUID.randomUUID().toString()
+            fileInLoads[nameFile] = name
+        }
+//                    "UUID.randomUUID().toString()"
+        val file = File("images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile")
+        withContext(Dispatchers.IO) {
+            file.createNewFile()
+            val decodedString = Base64.getDecoder().decode(contentFile)
+            file.appendBytes(decodedString)
+        }
+        if (status == "finish") {
+            sendMessage(
+                idUser,
+                senderUsername = session.username,
+                message = MessageDC(
+                    listFiles = listOf(
+                        FileDC(
+                            name = nameFile,
+                            size = getSizeFile(file.length()),
+                            type = typeFile,
+                            path = "images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile"
+                        )
+                    ),
+                    message = ""
+                ),
+                members = members,
+                chatEntity = chatEntity
+            )
+//            message.impl.insertOne(
+//                idChat, ChatMessageCollection(
+//                    idUser = idUser,
+//                    date = ServerDate.fullDate,
+//                    message = "",
+//                    listFiles = listOf(
+//                        FileDC(
+//                            name = "$nameFile.$typeFile",
+//                            path = "images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile"
+//                        )
+//                    )
+//                )
+//            )
+            fileInLoads.remove(nameFile)
+        }
+    }
 }
+
+val fileInLoads = ConcurrentHashMap<String, String>()
 
 //suspend fun main() {
 ////    coroutineScope {
@@ -271,5 +474,28 @@ class MessagesRoutController(
 //
 //fun main() {
 //
-//   RightMenusActions.getFriends()
+//    val sdf = SimpleDateFormat("ddhhmm")
+//    val currentDate = sdf.format(Date())
+//    val a = 260116
+//    val b = currentDate.toInt()
+//    if (b > a){
+//        println("Все размутан")
+//    } else
+//        println("еще в муте")
+//
+////        if (currentDate.takeLast(4))
+////    println(currentDate.takeLast(2))
+////    val mins = if (currentDate.takeLast(2).toInt() < 30)
+////        "15"
+////    else
+////        "49"
+////    val formattedString = currentDate.replace("[0-9]{2}\$".toRegex(), mins)
+////    println(currentDate)
+////    println(formattedString)
+//////    println(PasswordCoder.encodeStringFS(currentDate.hashCode().toString()))
+////    val code = PasswordCoder.encodeStringFS(formattedString)
+////    println(code)
+////    println(PasswordCoder.decodeStringFS(code))
+//
+////   RightMenusActions.getFriends()
 //}

@@ -1,8 +1,8 @@
 package com.foggyskies.chat.databases.main.datasources
 
-import com.foggyskies.chat.data.model.RegistrationUserDC
-import com.foggyskies.chat.data.model.UserMainEntity
-import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import com.foggyskies.chat.databases.main.models.RegistrationUserDC
+import com.foggyskies.chat.databases.main.models.UserMainEntity
+import com.foggyskies.chat.databases.main.models.UsersSearch
 
 interface UsersCollectionDataSource {
 
@@ -24,7 +24,7 @@ interface UsersCollectionDataSource {
 
     suspend fun checkOnExistEmail(e_mail: String): Boolean
 
-    suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean
+//    suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean
 
     suspend fun checkOnExistUser(username: String): Boolean
 

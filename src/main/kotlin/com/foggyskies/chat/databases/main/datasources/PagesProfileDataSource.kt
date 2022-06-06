@@ -1,6 +1,6 @@
 package com.foggyskies.chat.databases.main.datasources
 
-import com.foggyskies.chat.data.model.PageProfileDC
+import com.foggyskies.chat.databases.main.models.PageProfileDC
 
 interface PagesProfileDataSource {
 

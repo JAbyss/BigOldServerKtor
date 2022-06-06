@@ -1,7 +1,7 @@
 package com.foggyskies.chat.databases.main.datasources
 
-import com.foggyskies.chat.data.model.UserNameID
-import com.jetbrains.handson.chat.server.chat.data.model.Token
+import com.foggyskies.chat.databases.main.models.UserNameID
+import com.foggyskies.chat.databases.main.models.Token
 
 interface TokenCollectionDataSource {
 

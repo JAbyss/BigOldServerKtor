@@ -1,8 +1,11 @@
 package com.foggyskies.chat.routes
 
 import com.foggyskies.chat.data.model.ChatSession
-import com.foggyskies.chat.data.model.PageProfileDC
-import com.foggyskies.chat.data.model.UserNameID
+import com.foggyskies.chat.databases.main.models.PageProfileDC
+import com.foggyskies.chat.databases.main.models.UserNameID
+import com.foggyskies.chat.databases.main.models.IdUserReceiver
+import com.foggyskies.chat.databases.main.models.MuteChatDC
+import com.foggyskies.chat.extendfun.generateUUID
 import com.foggyskies.chat.extendfun.isTrue
 import com.foggyskies.chat.newroom.UserRoutController
 import com.foggyskies.plugin.SystemRouting
@@ -36,7 +39,6 @@ fun Route.usersRoutes() {
         if (!sessionsMainSockets.contains(idUser)) {
             sessionsMainSockets.add(idUser)
             webSocket("/mainSocket/$idUser") {
-
                 val session = call.sessions.get<ChatSession>()
                 if (session == null) {
                     routController.setStatusUser(idUser, "Не в сети")
@@ -73,7 +75,7 @@ fun Route.usersRoutes() {
                     },
                     "getNewMessages" to suspend {
                         "getNewMessages|${Json.encodeToString(routController.getAllNewMessages(idUser))}"
-                    }
+                    },
                 )
                 val map_action_unit = mapOf(
                     "logOut" to suspend { routController.logOut(token.toString()) },
@@ -104,7 +106,7 @@ fun Route.usersRoutes() {
                     incoming.consumeEach { frame ->
                         if (frame is Frame.Text) {
                             val incomingData = frame.readText()
-                            val regex = ".+(?=\\|)".toRegex()
+                            val regex = "\\w+(?=\\|)".toRegex()
                             val action = regex.find(incomingData)?.value
 
                             if (map_actions.containsKey(action)) {
@@ -129,6 +131,11 @@ fun Route.usersRoutes() {
                                         username = user.username
                                     ), idReceiver
                                 )
+                            } else if (action == "loadFile") {
+                                val data = "(?<=\\|).+(?=\\|)".toRegex().find(incomingData)?.value!!.split("|")
+                                val pathWithFile = data[0]
+                                val nameOperation = data[1] + "-" + generateUUID(7)
+                                routController.loadFile(pathWithFile, nameOperation, this)
                             }
                         }
                     }
@@ -156,6 +163,20 @@ fun Route.usersRoutes() {
 
     static("/") {
         files(".")
+    }
+
+    post("/muteChat") {
+        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val isTokenExist = routController.checkOnExistToken(token.toString())
+
+        val mutedChat = call.receive<MuteChatDC>()
+
+        if (isTokenExist) {
+            routController.muteChat(mutedChat, token.toString())
+            call.respond(HttpStatusCode.OK)
+        } else {
+            call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+        }
     }
 
     post("/createPageProfile") {
@@ -190,7 +211,6 @@ fun Route.usersRoutes() {
         }
     }
     post("/createMainSocket") {
-//        val idUser = call.parameters["idUser"]
 
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
         val isTokenExist = routController.checkOnExistToken(token.toString())
@@ -329,11 +349,19 @@ fun Route.usersRoutes() {
                 routController.deleteAvatarByIdUser(avatarOld)
             }
 
-            val decodedString = Base64.getDecoder().decode(image.toString())
-            val countFiles = File("images/avatars/").list().size + 1
+            val decodedString = Base64.getDecoder().decode(image)
+
+            val pathString = "${SystemRouting.Images.BASE_DIR}/${SystemRouting.Images.AVATARS}"
+            val path = Paths.get(pathString)
+            val file = File(pathString)
+            if (!Files.exists(path)) {
+                file.mkdirs()
+            }
+//            val countFiles = File("images/avatars/").list().size + 1
             val name = ObjectId().toString()
-            File("images/avatars/avatar_${name}.jpg").writeBytes(decodedString)
-            val avatar = routController.changeAvatarByUserId(idUser, "images/avatars/avatar_$name.jpg")
+            val readyString = "$pathString/avatar_${name}.jpg"
+            File(readyString).writeBytes(decodedString)
+            val avatar = routController.changeAvatarByUserId(idUser, readyString)
             call.respond(HttpStatusCode.OK, avatar)
         } else {
             call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
@@ -347,7 +375,6 @@ fun Route.usersRoutes() {
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         if (isTokenExist) {
-//            val otherUser = routController.getUserByIdUser(idOtherUser.toString())
             val listPages = routController.getAllPagesByIdUser(idOtherUser.toString())
             call.respond(HttpStatusCode.OK, listPages)
         } else {
@@ -358,14 +385,12 @@ fun Route.usersRoutes() {
     post("/changeAvatarProfile") {
         val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
         val idPage = call.request.headers["idPage"] ?: ""
-//        val image = call.parameters["image"] ?: call.respond(HttpStatusCode.BadRequest, "Image не получен.")
 
         val image = call.receiveText()
 
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         if (isTokenExist) {
-//            val idUser = routController.getUserByToken(token.toString()).idUser
 
             val avatarOld = routController.getAvatarPageProfile(idPage)
 
@@ -373,10 +398,17 @@ fun Route.usersRoutes() {
                 routController.deleteAvatarByIdUser(avatarOld)
             }
 
+            val pathString = "${SystemRouting.Images.BASE_DIR}/${SystemRouting.Images.profiles_avatars}"
+            val path = Paths.get(pathString)
+            val file = File(pathString)
+            if (!Files.exists(path)) {
+                file.mkdirs()
+            }
             val decodedString = Base64.getDecoder().decode(image)
             val name = ObjectId().toString()
-            File("images/profiles_avatar/image_${name}.jpg").writeBytes(decodedString)
-            val avatar = routController.changeAvatarByIdPage(idPage, "images/profiles_avatar/image_$name.jpg")
+            val readyString = "$pathString/image_${name}.jpg"
+            File(readyString).writeBytes(decodedString)
+            val avatar = routController.changeAvatarByIdPage(idPage, readyString)
             call.respond(HttpStatusCode.OK, avatar)
         } else {
             call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
@@ -384,7 +416,25 @@ fun Route.usersRoutes() {
     }
 }
 
-@kotlinx.serialization.Serializable
-data class IdUserReceiver(
-    val id: String
-)
+//fun Boolean.toInt(): Int {
+//    return if (this)
+//        1 else
+//        0
+//}
+
+//fun main() {
+//
+//    val (A, B) = Pair(-2, 2)
+//
+//    val f = (A + B == 2)
+//    val s = A != B
+//    val th = A < 0
+//
+//    val ad = 0 > 0 && true
+//
+////    val z = 1 in 0..0
+//    println((if (f) 1 else 0) !in 0..(if (s) 1 else 0))
+//    println("first $f, second $s, third $th")
+//    println("itog $ad")
+//
+//}

@@ -1,6 +1,6 @@
 package com.foggyskies.chat.newroom
 
-import com.jetbrains.handson.chat.server.chat.data.model.Token
+import com.foggyskies.chat.databases.main.models.Token
 import org.litote.kmongo.coroutine.CoroutineDatabase
 import org.litote.kmongo.eq
 

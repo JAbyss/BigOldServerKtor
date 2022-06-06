@@ -4,9 +4,10 @@ import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.bettamodels.NotificationDocument
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.main.datasources.*
+import com.foggyskies.chat.databases.main.models.*
 import com.foggyskies.chat.extendfun.forEachSuspend
-import com.jetbrains.handson.chat.server.chat.data.model.Token
-import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import com.foggyskies.chat.databases.main.models.Token
+import com.foggyskies.chat.databases.main.models.UsersSearch
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.decodeFromString
@@ -51,6 +52,16 @@ class MainDBImpl(
         db.getCollection<ChatMainEntity>("chats").insertOne(document)
         return document.idChat
     }
+
+    override suspend fun muteChat(idChat: String, idUser: String, nameField: ChatUserEntity_<ChatMainEntity>, time: String) {
+        db.getCollection<ChatMainEntity>("chats")
+            .findOneAndUpdate(
+                ChatMainEntity::idChat eq idChat, setValue(
+                    nameField.notifiable, ""
+                )
+            )
+    }
+
 
     suspend fun getFriendsDocumentFriendByIdUser(idUser: String): FriendDC? {
         return db.getCollection<FriendDC>("friends").findOne(FriendDC::idUser eq idUser)
@@ -309,10 +320,10 @@ class MainDBImpl(
         return db.getCollection<UserMainEntity>("Users").findOne(UserMainEntity::e_mail eq e_mail) != null
     }
 
-    override suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean {
-        return db.getCollection<UserMainEntity>("users")
-            .findOne(and(UserMainEntity::username eq username, UserMainEntity::password eq password)) != null
-    }
+//    override suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean {
+//        return db.getCollection<UserMainEntity>("users")
+//            .findOne(UserMainEntity::username eq username)
+//    }
 
     override suspend fun checkOnExistUser(username: String): Boolean {
         return db.getCollection<UserMainEntity>("users").findOne(UserMainEntity::username eq username) != null

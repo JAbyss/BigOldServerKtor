@@ -1,6 +1,6 @@
 package com.foggyskies.chat.databases.main.datasources
 
-import com.foggyskies.chat.data.model.UserNameID
+import com.foggyskies.chat.databases.main.models.UserNameID
 import io.ktor.websocket.*
 
 interface FriendsCollectionDataSource {

@@ -1,4 +1,4 @@
-package com.foggyskies.chat.data.model
+package com.foggyskies.chat.databases.message.models
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -10,12 +10,12 @@ data class ChatMessageCollection(
     @BsonId
     @SerialName(value = "_id")
     var id: String = ObjectId().toString(),
-//    var author: String,
     var idUser: String,
     var date: String,
     var message: String,
-    var listImages: List<String> = emptyList()
-){
+    var listImages: List<String> = emptyList(),
+    var listFiles: List<FileDC> = emptyList()
+) {
     fun toCMDC(): ChatMessageDC {
         return ChatMessageDC(
             id = id,
@@ -23,19 +23,27 @@ data class ChatMessageCollection(
             author = "",
             date = date,
             message = message,
-            listImages = listImages
+            listImages = listImages,
+            listFiles = listFiles
         )
     }
 }
 
 @Serializable
+data class FileDC(
+    val name: String,
+    val size: String = "",
+    val type: String = "",
+    val path: String = ""
+)
+
+@Serializable
 data class ChatMessageDC(
-//    @BsonId
     var id: String = ObjectId().toString(),
-//    var author: String,
     var idUser: String,
     var author: String,
     var date: String,
     var message: String,
-    var listImages: List<String> = emptyList()
+    var listImages: List<String> = emptyList(),
+    var listFiles: List<FileDC> = emptyList()
 )

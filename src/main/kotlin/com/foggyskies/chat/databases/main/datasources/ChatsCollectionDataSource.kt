@@ -1,9 +1,8 @@
 package com.foggyskies.chat.databases.main.datasources
 
-import com.foggyskies.chat.data.model.ChatMainEntity
-import com.foggyskies.chat.data.model.ChatMainEntity_
-import com.foggyskies.chat.data.model.ChatUserEntity
-import com.foggyskies.chat.data.model.UserNameID
+import com.foggyskies.chat.data.model.*
+import com.foggyskies.chat.databases.main.models.ChatMainEntity
+import com.foggyskies.chat.databases.main.models.UserNameID
 
 interface ChatsCollectionDataSource {
 
@@ -13,4 +12,5 @@ interface ChatsCollectionDataSource {
 
     suspend fun createChat(firstCompanion: UserNameID, secondCompanion: UserNameID): String
 
+    suspend fun muteChat(idChat: String, idUser: String, nameField: ChatUserEntity_<ChatMainEntity>, time: String = "")
 }

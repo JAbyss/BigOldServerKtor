@@ -1,6 +1,6 @@
 package com.foggyskies.chat.newroom
 
-import com.foggyskies.chat.data.model.UserIUSI
+import com.foggyskies.chat.databases.main.models.UserIUSI
 import com.foggyskies.chat.databases.main.MainDBImpl
 import org.litote.kmongo.coroutine.CoroutineDatabase
 

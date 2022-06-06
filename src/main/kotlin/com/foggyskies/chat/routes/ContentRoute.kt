@@ -1,14 +1,16 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.chat.data.model.CommentDC
+import com.foggyskies.chat.databases.content.models.CommentDC
 import com.foggyskies.chat.data.model.ContentRequestDC
 import com.foggyskies.chat.newroom.ContentRoutController
+import com.foggyskies.chat.newroom.SelectedPostWithIdPageProfile
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import kotlinx.coroutines.async
+import io.ktor.util.collections.*
+import kotlinx.coroutines.*
 import org.bson.types.ObjectId
 import org.koin.ktor.ext.inject
 import java.text.SimpleDateFormat
@@ -59,7 +61,11 @@ fun Route.contentRoute() {
             if (isTokenExist) {
                 val sdf = SimpleDateFormat("hh:mm")
                 val currentDate = sdf.format(Date())
-                routController.addNewComment(idPageProfile.toString(), idPost.toString(), (comment as CommentDC).copy(id = ObjectId().toString(), date = currentDate))
+                routController.addNewComment(
+                    idPageProfile.toString(),
+                    idPost.toString(),
+                    (comment as CommentDC).copy(id = ObjectId().toString(), date = currentDate)
+                )
                 call.respond(HttpStatusCode.OK)
             }
         }
@@ -68,9 +74,12 @@ fun Route.contentRoute() {
 
             val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
             val isTokenExist = routController.checkOnExistToken(token.toString())
+            println(token.toString())
             if (isTokenExist) {
                 val posts = routController.getPosts(token.toString())
-                call.respond(posts)
+                call.respond(HttpStatusCode.OK, posts)
+            } else {
+                call.respond(HttpStatusCode.OK, token.toString())
             }
         }
         get("/getComments{idPageProfile}{idPost}") {
@@ -108,7 +117,8 @@ fun Route.contentRoute() {
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
-                val isLiked = routController.addLikeToPost(idPageProfile.toString(), idPost.toString(), token.toString())
+                val isLiked =
+                    routController.addLikeToPost(idPageProfile.toString(), idPost.toString(), token.toString())
                 call.respond(HttpStatusCode.OK, isLiked)
             } else {
                 call.respond(HttpStatusCode.BadRequest, "Token не существует.")
@@ -123,7 +133,8 @@ fun Route.contentRoute() {
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
-                val info = routController.getInfoAboutOnePost(idPageProfile.toString(), idPost.toString(), token.toString())
+                val info =
+                    routController.getInfoAboutOnePost(idPageProfile.toString(), idPost.toString(), token.toString())
                 call.respond(HttpStatusCode.OK, info!!)
             } else {
                 call.respond(HttpStatusCode.BadRequest, "Token не существует.")
@@ -132,3 +143,37 @@ fun Route.contentRoute() {
 
     }
 }
+
+//suspend fun main() {
+//    CoroutineScope(Dispatchers.Default).launch {
+//        var counter = 0
+//        val list = ConcurrentList<Deferred<Int>>()
+//        while (true) {
+//            delay(5)
+////            list.add(async {
+//            async {
+//                HttpClient(CIO) {
+//                    install(JsonFeature) {
+//                        serializer = KotlinxSerializer()
+//                    }
+//                    install(HttpTimeout) {
+//                        requestTimeoutMillis = 30000
+//                    }
+//                }.use {
+//                    val a = it.get<HttpResponse>("http://94.41.84.183:2526/content/getPosts") {
+//                        this.headers["Auth"] = "6294b2095b296c7b5d2d171c"
+//                    }
+////                return@async a.status.value
+//                }
+//
+//            }
+//        }
+////            if (list.size > 3000){
+////                break
+////            }
+//    }.join()
+////        list.awaitAll()
+////        list.forEach {
+////            println(it.getCompleted())
+////        }
+//}

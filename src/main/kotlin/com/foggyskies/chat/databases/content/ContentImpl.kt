@@ -1,7 +1,9 @@
 package com.foggyskies.chat.databases.content
 
-import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.datasources.ContentCollectionDataSource
+import com.foggyskies.chat.databases.content.models.CommentDC
+import com.foggyskies.chat.databases.content.models.ContentPreviewDC
+import com.foggyskies.chat.databases.content.models.ContentUsersDC
 import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineCollection
 import org.litote.kmongo.coroutine.CoroutineDatabase

@@ -1,4 +1,4 @@
-package com.foggyskies.chat.data.model
+package com.foggyskies.chat.databases.main.models
 
 import org.bson.codecs.pojo.annotations.BsonId
 

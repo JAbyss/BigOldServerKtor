@@ -2,7 +2,12 @@ package com.foggyskies.chat.newroom
 
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
+import com.foggyskies.chat.databases.content.models.CommentDC
+import com.foggyskies.chat.databases.content.models.ContentPreviewDC
+import com.foggyskies.chat.databases.content.models.ContentUsersDC
 import com.foggyskies.chat.databases.main.MainDBImpl
+import com.foggyskies.chat.databases.main.models.UserIUSI
+import org.bson.codecs.pojo.annotations.BsonId
 import org.litote.kmongo.eq
 import java.io.File
 import java.util.*
@@ -48,26 +53,56 @@ class ContentRoutController(
     }
 
     suspend fun getPosts(token: String): List<SelectedPostWithIdPageProfile> {
-        val listPosts = content.db.getCollection<ContentUsersDC>("content_6283b897d249eb7a90167baa").find().toList()
-        val idUser = main.impl.getTokenByToken(token).idUser
-        val newList = listPosts.map {
-            SelectedPostWithIdPageProfile(
-                idPageProfile = "6283b897d249eb7a90167baa",
-                item = ContentPreviewDC(
-                    id = it.id,
-                    address = it.address
-                ),
-                image = "images/profiles_avatar/image_628a789c95044864e0b9e6b5.jpg",
-                author = "Test",
-                countComets = it.comments.size.toString(),
-                countLikes = it.likes.size.toString(),
-                isLiked = it.likes.contains(idUser)
+        val collections = content.db.listCollectionNames()
+        val mapPagesAndListPosts = hashMapOf<KeyPost, List<ContentUsersDC>>()
+        collections.forEach {
+            val listPost = content.db.getCollection<ContentUsersDC>(it).find("{_id: {\$ne: 'system'}}").toList()
+            val systemDoc = content.db.getCollection<SystemDoc>(it).findOne("{_id: {\$eq: 'system'}}")
+            val regex = "(?<=_).+".toRegex()
+            val key = regex.find(it)?.value!!
+            val keyPost = KeyPost(idPage = key)
+            systemDoc?.let {
+                val idUser = systemDoc.owner_id
+                keyPost.username = main.impl.getUserByIdUser(idUser).username
+                keyPost.avatar = main.impl.getAvatarByIdUser(idUser)
 
-            )
+            }
+
+            if (listPost.isNotEmpty())
+                if (mapPagesAndListPosts[keyPost] != null)
+                    mapPagesAndListPosts[keyPost] =
+                        mapPagesAndListPosts[keyPost]!! + listPost
+                else
+                    mapPagesAndListPosts[keyPost] = listPost
+        }
+
+        val idUser = main.impl.getTokenByToken(token).idUser
+        val mainFormattedListPosts = mutableListOf<SelectedPostWithIdPageProfile>()
+
+        mapPagesAndListPosts.forEachKeys { key, listPosts, index ->
+
+            val formattedListPosts = listPosts.map {
+                SelectedPostWithIdPageProfile(
+                    idPageProfile = key.idPage,
+                    item = ContentPreviewDC(
+                        id = it.id,
+                        address = it.address
+                    ),
+                    image = key.avatar,
+                    description = if (it.description == "Описание публикации...") "" else it.description,
+                    author = key.username,
+                    countComets = it.comments.size.toString(),
+                    countLikes = it.likes.size.toString(),
+                    isLiked = it.likes.contains(idUser)
+
+                )
+            }
+            mainFormattedListPosts.addAll(formattedListPosts)
+
         }
 
 
-        return newList
+        return mainFormattedListPosts
     }
 
     @kotlinx.serialization.Serializable
@@ -135,7 +170,25 @@ data class SelectedPostWithIdPageProfile(
     var item: ContentPreviewDC,
     var author: String,
     var image: String,
+    var description: String,
     var countLikes: String,
     var countComets: String,
     var isLiked: Boolean
 )
+@kotlinx.serialization.Serializable
+data class SystemDoc(
+    @BsonId
+    val id: String = "system",
+    val date_create: String,
+    val owner_id: String,
+)
+
+data class KeyPost(
+    var username: String = "",
+    var idPage: String = "",
+    var avatar: String = ""
+)
+
+fun <K, V> Map<K, V>.forEachKeys(action: (key: K, value: V, index: Int) -> Unit) {
+    for (key in this.keys) action(key, this[key]!!, this.keys.indexOf(key))
+}

@@ -1,10 +1,11 @@
 package com.foggyskies.chat.newroom
 
-import com.foggyskies.chat.data.model.RegistrationUserDC
-import com.foggyskies.chat.data.model.UserMainEntity
-import com.foggyskies.chat.data.model.UserNameID
+import com.foggyskies.PasswordCoder
+import com.foggyskies.chat.databases.main.models.RegistrationUserDC
+import com.foggyskies.chat.databases.main.models.UserMainEntity
+import com.foggyskies.chat.databases.main.models.UserNameID
 import com.foggyskies.chat.databases.main.MainDBImpl
-import com.jetbrains.handson.chat.server.chat.data.model.Token
+import com.foggyskies.chat.databases.main.models.Token
 import org.litote.kmongo.coroutine.CoroutineDatabase
 
 class AuthRoutController(
@@ -38,7 +39,8 @@ class AuthRoutController(
     }
 
     suspend fun checkPasswordOnCorrect(username: String, password: String): Boolean {
-        return mainDBImpl.checkPasswordOnCorrect(username, password)
+        val user = mainDBImpl.getUserByUsername(username)
+        return PasswordCoder.decodeStringFS(password) == PasswordCoder.decodeStringFS(user.password)
     }
 
     suspend fun checkOnExistEmail(e_mail: String): Boolean {

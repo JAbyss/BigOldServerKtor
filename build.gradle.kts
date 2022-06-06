@@ -56,6 +56,10 @@ dependencies {
     implementation("io.insert-koin:koin-ktor:$koin_version")
     implementation("io.insert-koin:koin-logger-slf4j:$koin_version")
 
+
+//    implementation("io.ktor:ktor-client-cio:$ktor_version")
+//    implementation("io.ktor:ktor-client-serialization:$ktor_version")
+
     kapt("org.litote.kmongo:kmongo-annotation-processor:$kmongo_version")
 }
 

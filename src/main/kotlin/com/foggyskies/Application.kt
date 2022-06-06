@@ -9,7 +9,8 @@ import io.ktor.features.*
 import io.ktor.serialization.*
 import kotlinx.serialization.json.Json
 import org.koin.ktor.ext.Koin
-import org.litote.kmongo.coroutine.CoroutineDatabase
+import java.text.SimpleDateFormat
+import java.util.*
 
 //fun main() {
 //
@@ -60,6 +61,25 @@ enum class DataBases {
     MAIN, MESSAGES, SUBSCRIBERS, CONTENT, NEW_MESSAGE
 }
 
+object ServerDate {
+    private val formatFull = SimpleDateFormat("d MMM yyyy г. HH:mm:ss")
+    private val formatMute = SimpleDateFormat("ddhhmm")
+
+//    fun getDate(): Date {
+//        val date: Date by inject<Date>(qualifier = named("ned"))
+//
+//        return Date()
+//    }
+
+
+    val fullDate: String
+        get() =
+            formatFull.format(Date())
+
+    val muteDate: String
+        get() = formatMute.format(Date())
+}
+
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused")
@@ -68,6 +88,7 @@ fun Application.module() {
     install(Koin) {
         modules(mainModule)
     }
+
     install(ContentNegotiation) {
         json(Json {
             prettyPrint = true

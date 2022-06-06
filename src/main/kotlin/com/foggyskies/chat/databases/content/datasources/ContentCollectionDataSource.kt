@@ -1,6 +1,8 @@
 package com.foggyskies.chat.databases.content.datasources
 
-import com.foggyskies.chat.data.model.*
+import com.foggyskies.chat.databases.content.models.CommentDC
+import com.foggyskies.chat.databases.content.models.ContentPreviewDC
+import com.foggyskies.chat.databases.content.models.ContentUsersDC
 
 interface ContentCollectionDataSource {
 

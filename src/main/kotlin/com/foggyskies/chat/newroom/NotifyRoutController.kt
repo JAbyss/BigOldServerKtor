@@ -1,11 +1,11 @@
 package com.foggyskies.chat.newroom
 
 import com.foggyskies.chat.data.bettamodels.Notification
-import com.foggyskies.chat.data.model.ChatMainEntity
-import com.foggyskies.chat.data.model.ChatMainEntity_
-import com.foggyskies.chat.data.model.FormattedChatDC
-import com.foggyskies.chat.data.model.UserMainEntity
+import com.foggyskies.chat.databases.main.models.ChatMainEntity
+import com.foggyskies.chat.databases.main.models.FormattedChatDC
+import com.foggyskies.chat.databases.main.models.UserMainEntity
 import com.foggyskies.chat.databases.main.MainDBImpl
+import com.foggyskies.chat.databases.main.models.ChatMainEntity_
 import io.ktor.websocket.*
 import org.litote.kmongo.and
 import org.litote.kmongo.coroutine.CoroutineDatabase

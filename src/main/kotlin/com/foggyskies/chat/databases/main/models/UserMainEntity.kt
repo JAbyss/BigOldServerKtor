@@ -1,6 +1,5 @@
-package com.foggyskies.chat.data.model
+package com.foggyskies.chat.databases.main.models
 
-import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 

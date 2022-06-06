@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Member(
+    val idUser: String,
     val username: String,
     val sessionId: String,
     val socket: WebSocketSession

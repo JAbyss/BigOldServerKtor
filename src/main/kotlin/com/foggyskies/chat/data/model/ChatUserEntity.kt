@@ -6,5 +6,6 @@ import org.litote.kmongo.Data
 @kotlinx.serialization.Serializable
 data class ChatUserEntity(
     var idUser: String,
-    var nameUser: String
+    var nameUser: String,
+    var notifiable: String = ""
 )

@@ -1,18 +1,25 @@
 package com.foggyskies.chat.newroom
 
+import com.foggyskies.ServerDate
 import com.foggyskies.chat.data.model.*
 import com.foggyskies.chat.databases.content.ContentImpl
+import com.foggyskies.chat.databases.content.models.ContentUsersDC
 import com.foggyskies.chat.databases.main.MainDBImpl
+import com.foggyskies.chat.databases.main.models.*
 import com.foggyskies.chat.databases.message.MessagesDBImpl
-import com.foggyskies.chat.databases.newmessage.NewMessagesCollection
 import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.databases.subscribers.SubscribersImpl
-import com.jetbrains.handson.chat.server.chat.data.model.Token
-import com.jetbrains.handson.chat.server.chat.data.model.UsersSearch
+import com.foggyskies.chat.databases.main.models.Token
+import com.foggyskies.chat.databases.main.models.UsersSearch
+import com.foggyskies.chat.databases.newmessage.models.NewMessagesCollection
+import com.foggyskies.chat.databases.subscribers.models.SubscribersDC
+import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
 import org.litote.kmongo.addToSet
 import org.litote.kmongo.eq
 import java.io.File
+import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 class UserRoutController(
     private val content: ImpAndDB<ContentImpl>,
@@ -20,7 +27,7 @@ class UserRoutController(
     private val message: ImpAndDB<MessagesDBImpl>,
     private val subscribers: ImpAndDB<SubscribersImpl>,
     private val new_messages: ImpAndDB<NewMessagesDBImpl>
-    ) {
+) {
     suspend fun checkOnExistToken(token: String): Boolean {
         return main.impl.checkOnExistToken(token)
     }
@@ -35,6 +42,13 @@ class UserRoutController(
             val companion = if (idUser == chat.firstCompanion?.idUser) chat.secondCompanion!! else chat.firstCompanion!!
             val imageComp = main.impl.getAvatarByIdUser(companion.idUser)
             val lastMessage = message.impl.getLastMessage(id)
+//            val newMessage =
+//            val chatEnt = main.impl.getChatById(id)
+            var newMessagesMy = new_messages.impl.getNewMessagesByIdChat(id, idUser)
+
+            if (newMessagesMy.isEmpty()) {
+                newMessagesMy = new_messages.impl.getNewMessagesByIdChat(id, companion.idUser)
+            }
 
             listChats.add(
                 FormattedChatDC(
@@ -42,7 +56,10 @@ class UserRoutController(
                     nameChat = companion.nameUser,
                     idCompanion = companion.idUser,
                     image = imageComp,
-                    lastMessage = lastMessage
+                    lastMessage = if (newMessagesMy.isNotEmpty())
+                        newMessagesMy.last().message.ifEmpty { "Изображение" }
+                    else
+                        lastMessage
                 )
             )
         }
@@ -190,6 +207,12 @@ class UserRoutController(
         main.db.getCollection<PageProfileDC>("pages_profile").insertOne(item)
         subscribers.db.createCollection("subscribers_${item.id}")
         content.db.createCollection("content_${item.id}")
+
+        val systemDoc = SystemDoc(
+            date_create = ServerDate.fullDate,
+            owner_id = idUser
+        )
+        content.db.getCollection<SystemDoc>("content_${item.id}").insertOne(systemDoc)
         main.db.getCollection<UserMainEntity>("users")
             .findOneAndUpdate(UserMainEntity::idUser eq idUser, addToSet(UserMainEntity::pages_profile, item.id))
     }
@@ -241,7 +264,7 @@ class UserRoutController(
     }
 
     suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession) {
-        new_messages.impl.watchForNewMessages(idUser, socket)
+        new_messages.impl.watchForNewMessages(idUser, socket, main)
     }
 
     suspend fun getAllNewMessages(idUser: String): List<NewMessagesCollection> {
@@ -250,5 +273,46 @@ class UserRoutController(
 
     suspend fun getAvatarPageProfile(idPage: String): String {
         return main.impl.getAvatarPageProfile(idPage)
+    }
+
+    suspend fun muteChat(mutedChat: MuteChatDC, token: String) {
+        val chat = main.impl.getChatById(mutedChat.idChat)
+        val idUser = main.impl.getTokenByToken(token).idUser
+        val nameField =
+            if (chat.firstCompanion?.idUser == idUser) ChatMainEntity_.FirstCompanion else ChatMainEntity_.SecondCompanion
+        main.impl.muteChat(mutedChat.idChat, idUser, nameField, mutedChat.timeMute)
+    }
+
+//    val listDownloadingFiles = ConcurrentHashMap<>()
+    suspend fun loadFile(pathWithFile: String, nameOperation: String, socket: DefaultWebSocketServerSession) {
+        val file = File(pathWithFile)
+
+        file.inputStream().use { input ->
+            var arr =
+                if (file.length() / 8 < 4096) ByteArray((file.length() / 8).toInt()) else ByteArray(4096000)
+            var allReaded = 0L
+            val maxSize = file.length()
+            do {
+                val size =
+                    if (maxSize - allReaded < arr.size) {
+                        println("Check ${maxSize - allReaded}")
+                        arr = ByteArray((maxSize - allReaded).toInt())
+//                    println(a.size)
+                        input.read(arr)
+                    } else
+                        input.read(arr)
+                if (size <= 0) {
+//                    socket.send(Frame.Text("|>finish<|>$nameOperation<|"))
+                    println(allReaded)
+                    break
+                } else {
+                    allReaded += size
+                    val base64 = Base64.getEncoder().encodeToString(arr)
+                    println("Я чето делаю")
+                    socket.send(Frame.Text("loadFile|$nameOperation.${file.extension}|$base64"))
+                }
+            } while (true)
+        }
+
     }
 }

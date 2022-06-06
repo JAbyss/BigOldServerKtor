@@ -1,7 +1,7 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.chat.data.model.LoginUserDC
-import com.foggyskies.chat.data.model.RegistrationUserDC
+import com.foggyskies.chat.databases.main.models.LoginUserDC
+import com.foggyskies.chat.databases.main.models.RegistrationUserDC
 import com.foggyskies.chat.newroom.AuthRoutController
 import io.ktor.application.*
 import io.ktor.http.*

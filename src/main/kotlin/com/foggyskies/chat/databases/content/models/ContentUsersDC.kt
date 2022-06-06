@@ -1,4 +1,4 @@
-package com.foggyskies.chat.data.model
+package com.foggyskies.chat.databases.content.models
 
 import com.foggyskies.chat.newroom.SelectedPostWithIdPageProfile
 import kotlinx.serialization.Serializable
@@ -39,7 +39,6 @@ data class ContentUsersDC(
 
 @Serializable
 data class CommentDC(
-//    @BsonId
     var id: String,
     var idUser: String,
     var message: String,
@@ -52,8 +51,3 @@ data class ContentPreviewDC(
     val id: String,
     val address: String,
 )
-
-//@Serializable
-//data class LikesDC(
-//    var idUser: String
-//)

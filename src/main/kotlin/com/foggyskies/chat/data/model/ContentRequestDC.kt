@@ -1,7 +1,7 @@
 package com.foggyskies.chat.data.model
 
+import com.foggyskies.chat.databases.content.models.ContentUsersDC
 import org.bson.types.ObjectId
-import javax.management.monitor.StringMonitor
 
 @kotlinx.serialization.Serializable
 data class ContentRequestDC(

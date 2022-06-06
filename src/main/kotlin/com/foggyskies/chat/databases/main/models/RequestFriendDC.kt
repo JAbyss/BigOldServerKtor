@@ -1,5 +1,6 @@
-package com.foggyskies.chat.data.model
+package com.foggyskies.chat.databases.main.models
 
+import com.foggyskies.chat.databases.main.models.UserNameID
 import org.bson.codecs.pojo.annotations.BsonId
 import org.bson.types.ObjectId
 

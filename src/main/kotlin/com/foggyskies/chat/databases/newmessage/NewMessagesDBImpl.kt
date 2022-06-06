@@ -1,7 +1,15 @@
 package com.foggyskies.chat.databases.newmessage
 
+import com.foggyskies.ServerDate
+//import com.foggyskies.chat.data.model.ChatMainEntity_
+import com.foggyskies.chat.databases.message.models.ChatMessageCollection
+import com.foggyskies.chat.data.model.ImpAndDB
+import com.foggyskies.chat.databases.main.MainDBImpl
+import com.foggyskies.chat.databases.main.models.ChatMainEntity_
+import com.foggyskies.chat.databases.main.models.FriendDC
 import com.foggyskies.chat.databases.newmessage.datasources.NewMessageCollectionDataSource
-import com.jetbrains.handson.chat.server.chat.data.model.ChatMessage
+import com.foggyskies.chat.databases.newmessage.models.NewMessagesCollection
+import com.foggyskies.chat.databases.newmessage.models.WatchNewMessage
 import com.mongodb.MongoCommandException
 import com.mongodb.client.model.changestream.OperationType
 import io.ktor.http.cio.websocket.*
@@ -10,12 +18,9 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bson.BsonString
-import org.bson.codecs.pojo.annotations.BsonId
-import org.litote.kmongo.addToSet
+import org.litote.kmongo.*
 import org.litote.kmongo.coroutine.CoroutineCollection
 import org.litote.kmongo.coroutine.CoroutineDatabase
-import org.litote.kmongo.eq
-import org.litote.kmongo.json
 
 class NewMessagesDBImpl(
     private val db: CoroutineDatabase
@@ -33,11 +38,11 @@ class NewMessagesDBImpl(
         return getCollection(idUser).findOne(NewMessagesCollection::id eq idChat) != null
     }
 
-    override suspend fun getNewMessagesByIdChat(idChat: String, idUser: String): List<ChatMessage> {
+    override suspend fun getNewMessagesByIdChat(idChat: String, idUser: String): List<ChatMessageCollection> {
         return getCollection(idUser).findOne(NewMessagesCollection::id eq idChat)?.new_messages ?: emptyList()
     }
 
-    override suspend fun insertOneMessage(idChat: String, idUser: String, message: ChatMessage) {
+    override suspend fun insertOneMessage(idChat: String, idUser: String, message: ChatMessageCollection) {
         getCollection(idUser)
             .updateOne(NewMessagesCollection::id eq idChat, addToSet(NewMessagesCollection::new_messages, message))
     }
@@ -58,70 +63,70 @@ class NewMessagesDBImpl(
         getCollection(idUser).insertOne(NewMessagesCollection(id = idChat, new_messages = emptyList()))
     }
 
-    override suspend fun watchForNewMessages(idUser: String, socket: DefaultWebSocketServerSession) {
+    override suspend fun watchForNewMessages(
+        idUser: String,
+        socket: DefaultWebSocketServerSession,
+        main: ImpAndDB<MainDBImpl>
+    ) {
         val newMessages = getCollection(idUser).watch<NewMessagesCollection>()
 
-        val oldMapNewMessages = getCollection(idUser).find().toList().toMutableList()
+//        val oldMapNewMessages = getCollection(idUser).find().toList().toMutableList()
 //            mutableListOf<NewMessagesCollection>()
 
+
+
         newMessages.consumeEach { item ->
-            if (item.operationType == OperationType.INSERT || item.operationType == OperationType.UPDATE)
-            //            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
+            if (item.operationType == OperationType.INSERT || item.operationType == OperationType.UPDATE) {
+                //            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
                 if (item.updateDescription != null) {
                     val updatedFields =
-                        Json.decodeFromString<List<ChatMessage>>(item.updateDescription.updatedFields["new_messages"]?.asArray()?.values.toString())
+                        Json.decodeFromString<List<ChatMessageCollection>>(item.updateDescription.updatedFields["new_messages"]?.asArray()?.values.toString())
                     val idDocument = (item.documentKey[item.documentKey.firstKey] as BsonString).value
-                    val newMessagesCollection = NewMessagesCollection(
-                        id = idDocument,
-                        new_messages = updatedFields
-                    )
-                    Json.encodeToString(newMessagesCollection)
 
-                    var isIdExist = false
-                    var changeIndex: Int? = null
+                    val chat = main.impl.getChatById(idDocument)
+                    val (receiverCompanion, nameField) =
+                        if (chat.firstCompanion?.idUser != idUser)
+                            Pair(chat.firstCompanion!!, ChatMainEntity_.FirstCompanion)
+                        else
+                            Pair(chat.secondCompanion!!, ChatMainEntity_.SecondCompanion)
 
-                    oldMapNewMessages.forEachIndexed { index, oldMap ->
-                        if (oldMap.id == newMessagesCollection.id) {
-                            isIdExist = true
-                            changeIndex = index
-                            if (updatedFields.size > oldMap.new_messages.size) {
-                                val newValues = updatedFields - oldMap.new_messages.toSet()
-                                val newMessagesCollectionFormatted = NewMessagesCollection(
-                                    id = idDocument,
-                                    new_messages = newValues
-                                )
-                                println("REQUEST 01 $newMessagesCollectionFormatted")
+                    suspend fun sendNewMessages(){
+                        val new_message = updatedFields.last()
+                        val image = main.impl.getAvatarByIdUser(new_message.idUser)
+                        val username = main.impl.getUserByIdUser(new_message.idUser).username
+                        val newMessagesCollection = WatchNewMessage(
+                            idChat = idDocument,
+                            image = image,
+                            username = username,
+                            new_message = new_message.toCMDC()
+                        )
 
-                                socket.send(Frame.Text("getNewMessages|${newMessagesCollectionFormatted.json}"))
-                            }
+                        socket.send(Frame.Text("getNewMessages|${Json.encodeToString(newMessagesCollection)}"))
+                    }
+
+                    if (!receiverCompanion.notifiable.isEmpty()) {
+                        val timeMute = receiverCompanion.notifiable.toInt()
+                        if (ServerDate.muteDate.toInt() > timeMute) {
+                            // Размут
+                            main.impl.muteChat(idDocument, idUser, nameField = nameField)
+                            sendNewMessages()
                         }
+                    } else {
+                        sendNewMessages()
                     }
-
-                    if (!isIdExist) {
-                        oldMapNewMessages.add(newMessagesCollection)
-                        println("REQUEST 02 $newMessagesCollection")
-                        socket.send(Frame.Text("getNewMessages|${newMessagesCollection.json}"))
-                    }
-
-                    changeIndex?.let {
-                        oldMapNewMessages[it] = newMessagesCollection
-                    }
-                    println("REQUEST 1 $oldMapNewMessages")
-                } else {
-//                    val json = Json.decodeFromString<List<ChatMessage>>(item.fullDocument.json /**.new_messages.json*/)
-                    println("REQUEST 2")
                 }
+            }
         }
     }
 
     override suspend fun getAllNewMessages(idUser: String): List<NewMessagesCollection> {
         return getCollection(idUser).find().toList()
     }
-}
 
-@kotlinx.serialization.Serializable
-data class NewMessagesCollection(
-    @BsonId
-    val id: String,
-    val new_messages: List<ChatMessage>
-)
+    override suspend fun deleteNewMessage(idUser: String, idChat: String, idMessage: String): Int {
+        return getCollection(idUser).updateOne(
+            NewMessagesCollection::id eq idChat,
+            pullByFilter(NewMessagesCollection::new_messages, "{_id: '$idMessage'}".bson)
+        ).matchedCount.toInt()
+    }
+}
