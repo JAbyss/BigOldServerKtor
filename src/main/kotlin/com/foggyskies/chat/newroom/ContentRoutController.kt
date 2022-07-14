@@ -159,8 +159,17 @@ class ContentRoutController(
         token: String
     ): SelectedPostWithIdPageProfile? {
         val idUser = main.impl.getTokenByToken(token).idUser
+        val systemDoc = content.db.getCollection<SystemDoc>("content_$idPageProfile").findOne("{_id: {\$eq: 'system'}}")
+        val keyPost = KeyPost(idPage = idPageProfile)
+        systemDoc?.let {
+            val _idUser = systemDoc.owner_id
+            keyPost.username = main.impl.getUserByIdUser(_idUser).username
+            keyPost.avatar = main.impl.getAvatarByIdUser(_idUser)
+
+        }
+
         return content.impl.getInfoAboutOnePost(idPageProfile, idPost)
-            ?.toSelectedPostWithIdPageProfile(idPageProfile, idUser)
+            ?.toSelectedPostWithIdPageProfile(idPageProfile, idUser, keyPost.avatar, keyPost.username)
     }
 }
 

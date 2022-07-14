@@ -1,4 +1,4 @@
-package com.jetbrains.handson.chat.server.chat.data.model
+package com.foggyskies.chat.data.model
 
 import io.ktor.http.cio.websocket.*
 import kotlinx.serialization.Serializable

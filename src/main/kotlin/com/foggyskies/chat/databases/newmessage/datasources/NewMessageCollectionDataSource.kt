@@ -4,6 +4,7 @@ import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.message.models.ChatMessageCollection
 import com.foggyskies.chat.databases.newmessage.models.NewMessagesCollection
+import com.foggyskies.chat.routes.EditMessageEntity
 import io.ktor.websocket.*
 
 interface NewMessageCollectionDataSource {
@@ -25,4 +26,6 @@ interface NewMessageCollectionDataSource {
     suspend fun getAllNewMessages(idUser: String): List<NewMessagesCollection>
 
     suspend fun deleteNewMessage(idUser: String, idChat: String, idMessage: String): Int
+
+    suspend fun editMessage(editMessageEntity: EditMessageEntity): Boolean
 }

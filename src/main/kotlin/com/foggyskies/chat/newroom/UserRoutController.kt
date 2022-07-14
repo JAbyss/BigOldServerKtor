@@ -229,7 +229,7 @@ class UserRoutController(
                     val countSubscribers =
                         subscribers.db.getCollection<SubscribersDC>("subscribers_${it.id}").countDocuments().toString()
                     val countContent =
-                        content.db.getCollection<ContentUsersDC>("content_${it.id}").countDocuments().toString()
+                        (content.db.getCollection<ContentUsersDC>("content_${it.id}").countDocuments() - 1).toString()
                     listAllPages.add(it.withCountSubsAndContents(countSubscribers, countContent))
                 }
         }

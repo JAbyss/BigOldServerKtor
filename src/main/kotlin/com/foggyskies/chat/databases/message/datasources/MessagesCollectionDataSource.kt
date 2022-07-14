@@ -19,4 +19,6 @@ interface MessagesCollectionDataSource {
     suspend fun createCollection(idChat: String)
 
     suspend fun deleteMessage(idChat: String, idMessage: String): Int
+
+    suspend fun editMessage(idChat: String, idMessage: String, newMessage:String): Boolean
 }

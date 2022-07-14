@@ -2,6 +2,7 @@ package com.foggyskies.chat.routes
 
 import com.foggyskies.chat.databases.main.models.LoginUserDC
 import com.foggyskies.chat.databases.main.models.RegistrationUserDC
+import com.foggyskies.chat.extendfun.generateUUID
 import com.foggyskies.chat.newroom.AuthRoutController
 import io.ktor.application.*
 import io.ktor.http.*
@@ -20,18 +21,20 @@ fun Route.authRoutes() {
 
 
         if (isUserExist)
-            call.respond(status = HttpStatusCode.Conflict, message = "Пользователь с таким логином уже существует.")
+            call.respondText(status = HttpStatusCode.Conflict, text = "Пользователь с таким логином уже существует.")
         else {
             if (isEmailExist) {
-                call.respond(status = HttpStatusCode.Conflict, message = "Пользователь с таким e_mail уже существует.")
+                call.respondText(status = HttpStatusCode.Conflict, text = "Пользователь с таким e_mail уже существует.")
             } else {
+                val codeConfirmation = generateUUID(4)
+
                 val user = RegistrationUserDC(
                     username = params.username,
                     password = params.password,
                     e_mail = params.e_mail,
                 )
                 routController.createUser(user)
-                call.respond(status = HttpStatusCode.Created, message = "Регистрация прошла успешно.")
+                call.respondText(status = HttpStatusCode.Created, text = "Регистрация прошла успешно.")
             }
         }
     }
@@ -52,17 +55,17 @@ fun Route.authRoutes() {
                     val tokenDC = routController.createToken(user.toUserNameID())
                     token = "${tokenDC.id}|${tokenDC.idUser}"
                     println("Новый токен создан")
-                    call.respond(HttpStatusCode.Created, token)
+                    call.respondText(token, status = HttpStatusCode.Created)
                 } else {
                     val tokenDC = routController.getToken(params.username)
                     token = "${tokenDC.id}|${tokenDC.idUser}"
                     println("Старый токен получен")
-                    call.respond(HttpStatusCode.OK, token)
+                    call.respondText(token, status = HttpStatusCode.OK)
                 }
             } else
-                call.respond(HttpStatusCode.NotFound, "Пароль неверный")
+                call.respondText("Пароль неверный", status = HttpStatusCode.NotFound)
         } else {
-            call.respond(HttpStatusCode.NotFound, "Пользователь не найден")
+            call.respondText("Пользователь не найден", status = HttpStatusCode.NotFound)
         }
     }
 }

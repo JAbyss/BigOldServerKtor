@@ -1,8 +1,8 @@
 package com.foggyskies.chat.extendfun
 
 fun getSizeFile(size: Long): String {
-        if (size > 8) {
-            val bytes = size / 8f
+        if (size > 0) {
+            val bytes = size
             if (bytes > 1024) {
                 val kBytes = bytes / 1024f
                 if (kBytes > 1024) {
@@ -14,7 +14,7 @@ fun getSizeFile(size: Long): String {
                 } else
                     return "${String.format("%.1f", kBytes)} KB"
             } else
-                return "${String.format("%.1f", bytes)} B"
+                return "$bytes B"
         } else if (size == 0L)
             return "0 Bit"
         else

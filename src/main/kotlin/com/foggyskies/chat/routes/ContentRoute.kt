@@ -1,16 +1,13 @@
 package com.foggyskies.chat.routes
 
-import com.foggyskies.chat.databases.content.models.CommentDC
 import com.foggyskies.chat.data.model.ContentRequestDC
+import com.foggyskies.chat.databases.content.models.CommentDC
 import com.foggyskies.chat.newroom.ContentRoutController
-import com.foggyskies.chat.newroom.SelectedPostWithIdPageProfile
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.request.*
 import io.ktor.response.*
 import io.ktor.routing.*
-import io.ktor.util.collections.*
-import kotlinx.coroutines.*
 import org.bson.types.ObjectId
 import org.koin.ktor.ext.inject
 import java.text.SimpleDateFormat
@@ -31,7 +28,7 @@ fun Route.contentRoute() {
                     call.respond(HttpStatusCode.OK, it)
                 })
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
             }
         }
 
@@ -45,7 +42,7 @@ fun Route.contentRoute() {
                 val content = routController.getFirstFiftyContent(idPageProfile.toString())
                 call.respond(HttpStatusCode.OK, content)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
             }
         }
 
@@ -74,12 +71,23 @@ fun Route.contentRoute() {
 
             val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
             val isTokenExist = routController.checkOnExistToken(token.toString())
-            println(token.toString())
+            println(token)
             if (isTokenExist) {
-                val posts = routController.getPosts(token.toString())
+                val posts = listOf(
+                routController.getInfoAboutOnePost(idPageProfile = "629256b71372bb3eb6256391", idPost = "629257e01372bb3eb6256394", token = token.toString())?.apply {
+                    description = if (description == "Описание публикации...") "" else description
+                },
+                routController.getInfoAboutOnePost(idPageProfile = "629256b71372bb3eb6256391", idPost = "62925d3b1372bb3eb6256395", token = token.toString())?.apply {
+                    description = if (description == "Описание публикации...") "" else description
+                },
+                routController.getInfoAboutOnePost(idPageProfile = "62914107cc47483b16951b0b", idPost = "62accc9120936e5fbab1ca66", token = token.toString())?.apply {
+                    description = if (description == "Описание публикации...") "" else description
+                })
+//                println(posts)
+//                val posts = routController.getPosts(token.toString())
                 call.respond(HttpStatusCode.OK, posts)
             } else {
-                call.respond(HttpStatusCode.OK, token.toString())
+                call.respondText(status = HttpStatusCode.OK, text = token.toString())
             }
         }
         get("/getComments{idPageProfile}{idPost}") {
@@ -96,11 +104,20 @@ fun Route.contentRoute() {
             }
         }
         get("/getLikedUsers{idPageProfile}{idPost}") {
-            val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+            val token = call.request.headers["Auth"] ?: call.respondText(
+                status = HttpStatusCode.BadRequest,
+                text = "Токен не получен."
+            )
 
             val idPageProfile =
-                call.parameters["idPageProfile"] ?: call.respond(HttpStatusCode.BadRequest, "IdPageProfile не получен.")
-            val idPost = call.parameters["idPost"] ?: call.respond(HttpStatusCode.BadRequest, "IdPost не получен.")
+                call.parameters["idPageProfile"] ?: call.respondText(
+                    status = HttpStatusCode.BadRequest,
+                    text = "IdPageProfile не получен."
+                )
+            val idPost = call.parameters["idPost"] ?: call.respondText(
+                status = HttpStatusCode.BadRequest,
+                text = "IdPost не получен."
+            )
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
@@ -112,8 +129,14 @@ fun Route.contentRoute() {
             val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
 
             val idPageProfile =
-                call.parameters["idPageProfile"] ?: call.respond(HttpStatusCode.BadRequest, "IdPageProfile не получен.")
-            val idPost = call.parameters["idPost"] ?: call.respond(HttpStatusCode.BadRequest, "IdPost не получен.")
+                call.parameters["idPageProfile"] ?: call.respondText(
+                    status = HttpStatusCode.BadRequest,
+                    text = "IdPageProfile не получен."
+                )
+            val idPost = call.parameters["idPost"] ?: call.respondText(
+                status = HttpStatusCode.BadRequest,
+                text = "IdPost не получен."
+            )
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
@@ -121,15 +144,24 @@ fun Route.contentRoute() {
                     routController.addLikeToPost(idPageProfile.toString(), idPost.toString(), token.toString())
                 call.respond(HttpStatusCode.OK, isLiked)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Token не существует.")
             }
         }
         get("/getInfoAboutOnePost{idPageProfile}{idPost}") {
-            val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+            val token = call.request.headers["Auth"] ?: call.respondText(
+                status = HttpStatusCode.BadRequest,
+                text = "Токен не получен."
+            )
 
             val idPageProfile =
-                call.parameters["idPageProfile"] ?: call.respond(HttpStatusCode.BadRequest, "IdPageProfile не получен.")
-            val idPost = call.parameters["idPost"] ?: call.respond(HttpStatusCode.BadRequest, "IdPost не получен.")
+                call.parameters["idPageProfile"] ?: call.respondText(
+                    status = HttpStatusCode.BadRequest,
+                    text = "IdPageProfile не получен."
+                )
+            val idPost = call.parameters["idPost"] ?: call.respondText(
+                status = HttpStatusCode.BadRequest,
+                text = "IdPost не получен."
+            )
 
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
@@ -137,7 +169,7 @@ fun Route.contentRoute() {
                     routController.getInfoAboutOnePost(idPageProfile.toString(), idPost.toString(), token.toString())
                 call.respond(HttpStatusCode.OK, info!!)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Token не существует.")
             }
         }
 

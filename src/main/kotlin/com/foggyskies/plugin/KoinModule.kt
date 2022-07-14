@@ -15,6 +15,11 @@ import org.litote.kmongo.coroutine.coroutine
 import org.litote.kmongo.reactivestreams.KMongo
 import java.util.*
 
+//val uriMongo = "mongodb://localhost:27018/?directConnection=true"
+
+//val a = KMongo.createClient()
+//    .coroutine
+
 val mainModule = module {
     single(named(DataBases.MAIN)) {
         KMongo.createClient()

@@ -7,6 +7,7 @@ import io.ktor.routing.*
 fun Application.configureRouting() {
 
     install(Routing) {
+
         usersRoutes()
         authRoutes()
         createChatRoutes()
@@ -14,6 +15,8 @@ fun Application.configureRouting() {
         notificationRoutes()
         photoRouting()
         contentRoute()
+        testRoute()
+        cloudRoute()
     }
 }
 

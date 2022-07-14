@@ -11,31 +11,31 @@ import io.ktor.response.*
 import io.ktor.routing.*
 import org.koin.ktor.ext.inject
 
-fun Route.createChatRoutes(){
+fun Route.createChatRoutes() {
     val routController by inject<CreateChatRoutController>()
 
     post("/createChat") {
         val createChatDC = call.receive<CreateChat>()
 
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не получен.")
 
-        isTrue(token.toString().isNotEmpty()){
+        isTrue(token.toString().isNotEmpty()) {
             val isTokenExist = routController.checkOnExistToken(token.toString())
-            isFalse(isTokenExist){
-                call.respond(HttpStatusCode.NotFound, "Токен не был найден.")
+            isFalse(isTokenExist) {
+                call.respondText(status = HttpStatusCode.NotFound, text = "Токен не был найден.")
             }
             val userFromToken = routController.getUserByUsername(createChatDC.username)
 
             val idChat = routController.checkOnExistChatByIdUsers(userFromToken.id, createChatDC.idUserSecond)
 
-            if (idChat.isEmpty()){
+            if (idChat.isEmpty()) {
                 val idChat = routController.createChat(
                     idUserFirst = userFromToken.id,
                     idUserSecond = createChatDC.idUserSecond
                 )
-                call.respond(HttpStatusCode.Created, idChat)
+                call.respondText(status = HttpStatusCode.Created, text = idChat)
             } else {
-                call.respond(HttpStatusCode.OK, idChat)
+                call.respondText(status = HttpStatusCode.OK, text = idChat)
             }
         }
     }

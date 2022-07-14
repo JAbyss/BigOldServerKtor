@@ -1,10 +1,10 @@
 package com.foggyskies.chat.routes
 
 import com.foggyskies.chat.data.model.ChatSession
-import com.foggyskies.chat.databases.main.models.PageProfileDC
-import com.foggyskies.chat.databases.main.models.UserNameID
 import com.foggyskies.chat.databases.main.models.IdUserReceiver
 import com.foggyskies.chat.databases.main.models.MuteChatDC
+import com.foggyskies.chat.databases.main.models.PageProfileDC
+import com.foggyskies.chat.databases.main.models.UserNameID
 import com.foggyskies.chat.extendfun.generateUUID
 import com.foggyskies.chat.extendfun.isTrue
 import com.foggyskies.chat.newroom.UserRoutController
@@ -30,6 +30,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.*
 
+
 private var sessionsMainSockets = ConcurrentList<String>()
 
 fun Route.usersRoutes() {
@@ -39,6 +40,7 @@ fun Route.usersRoutes() {
         if (!sessionsMainSockets.contains(idUser)) {
             sessionsMainSockets.add(idUser)
             webSocket("/mainSocket/$idUser") {
+
                 val session = call.sessions.get<ChatSession>()
                 if (session == null) {
                     routController.setStatusUser(idUser, "Не в сети")
@@ -131,7 +133,11 @@ fun Route.usersRoutes() {
                                         username = user.username
                                     ), idReceiver
                                 )
-                            } else if (action == "loadFile") {
+                            }
+                            /**
+                             * loadFile|{Путь к файлу}|{Название файла}
+                             */
+                            else if (action == "loadFile") {
                                 val data = "(?<=\\|).+(?=\\|)".toRegex().find(incomingData)?.value!!.split("|")
                                 val pathWithFile = data[0]
                                 val nameOperation = data[1] + "-" + generateUUID(7)
@@ -166,7 +172,10 @@ fun Route.usersRoutes() {
     }
 
     post("/muteChat") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         val mutedChat = call.receive<MuteChatDC>()
@@ -175,12 +184,15 @@ fun Route.usersRoutes() {
             routController.muteChat(mutedChat, token.toString())
             call.respond(HttpStatusCode.OK)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Token не существует.")
         }
     }
 
     post("/createPageProfile") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         val page = call.receive<PageProfileDC>()
@@ -205,22 +217,25 @@ fun Route.usersRoutes() {
                 page.copy(id = ObjectId().toString(), image = readyPath)
             )
 
-            call.respond(HttpStatusCode.OK, "Страница создана")
+            call.respondText(status = HttpStatusCode.OK, text = "Страница создана")
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Token не существует.")
         }
     }
     post("/createMainSocket") {
 
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         if (isTokenExist) {
             val user = routController.getUserByToken(token.toString())
             createMainSocket(user.idUser)
-            call.respond(HttpStatusCode.OK, user.idUser)
+            call.respondText(user.idUser, status = HttpStatusCode.OK)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+            call.respondText("Token не существует.", status = HttpStatusCode.BadRequest)
         }
     }
 
@@ -263,16 +278,19 @@ fun Route.usersRoutes() {
 
     get("/chats") {
 
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
         isTrue(token.toString().isNotEmpty()) {
             val isTokenExist = routController.checkOnExistToken(token.toString())
 
             if (isTokenExist) {
                 val chats = routController.getChats(token.toString())
-                call.respond(chats)
+                call.respond(HttpStatusCode.OK, chats)
             } else {
-                call.respond(HttpStatusCode.NotFound, "Токен не был найден.")
+                call.respondText(status = HttpStatusCode.NotFound, text = "Токен не был найден.")
             }
         }
     }
@@ -281,7 +299,10 @@ fun Route.usersRoutes() {
         val idUserReceiver: IdUserReceiver = (call.receive<IdUserReceiver>()
             ?: call.respond(HttpStatusCode.BadRequest, "IdUser не получен.")) as IdUserReceiver
 
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
         isTrue(token.toString().isNotEmpty()) {
             val isTokenExist = routController.checkOnExistToken(token.toString())
@@ -303,7 +324,10 @@ fun Route.usersRoutes() {
     }
 
     get("/friends") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
         isTrue(token.toString().isNotEmpty()) {
             val isTokenExist = routController.checkOnExistToken(token.toString())
@@ -312,27 +336,33 @@ fun Route.usersRoutes() {
                 val listFriends = routController.getFriends(token.toString())
                 call.respond(HttpStatusCode.OK, listFriends)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Токен неверный.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Токен неверный.")
             }
         }
     }
 
     get("/avatar") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
         if (isTokenExist) {
             val idUser = routController.getUserByToken(token.toString()).idUser
             val avatar = routController.getAvatarByIdUser(idUser)
-            call.respond(HttpStatusCode.OK, avatar)
+            call.respondText(status = HttpStatusCode.OK, text = avatar)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
         }
     }
 
     post("/changeAvatar") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
 //        val image = call.parameters["image"] ?: call.respond(HttpStatusCode.BadRequest, "Image не получен.")
 
@@ -362,15 +392,21 @@ fun Route.usersRoutes() {
             val readyString = "$pathString/avatar_${name}.jpg"
             File(readyString).writeBytes(decodedString)
             val avatar = routController.changeAvatarByUserId(idUser, readyString)
-            call.respond(HttpStatusCode.OK, avatar)
+            call.respondText(status = HttpStatusCode.OK, text =  avatar)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
         }
     }
     get("/getPagesProfileByIdUser{idUser}") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
 
-        val idOtherUser = call.parameters["idUser"] ?: call.respond(HttpStatusCode.BadRequest, "IdUser не получен.")
+        val idOtherUser = call.parameters["idUser"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "IdUser не получен."
+        )
 
         val isTokenExist = routController.checkOnExistToken(token.toString())
 
@@ -378,12 +414,15 @@ fun Route.usersRoutes() {
             val listPages = routController.getAllPagesByIdUser(idOtherUser.toString())
             call.respond(HttpStatusCode.OK, listPages)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
         }
     }
 
     post("/changeAvatarProfile") {
-        val token = call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
+        val token = call.request.headers["Auth"] ?: call.respondText(
+            status = HttpStatusCode.BadRequest,
+            text = "Токен не получен."
+        )
         val idPage = call.request.headers["idPage"] ?: ""
 
         val image = call.receiveText()
@@ -411,7 +450,7 @@ fun Route.usersRoutes() {
             val avatar = routController.changeAvatarByIdPage(idPage, readyString)
             call.respond(HttpStatusCode.OK, avatar)
         } else {
-            call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+            call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
         }
     }
 }

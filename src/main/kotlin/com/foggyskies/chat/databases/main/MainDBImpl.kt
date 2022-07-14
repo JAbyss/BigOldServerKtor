@@ -2,12 +2,11 @@ package com.foggyskies.chat.databases.main
 
 import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.bettamodels.NotificationDocument
-import com.foggyskies.chat.data.model.*
+import com.foggyskies.chat.data.model.ChatUserEntity
+import com.foggyskies.chat.data.model.ChatUserEntity_
 import com.foggyskies.chat.databases.main.datasources.*
 import com.foggyskies.chat.databases.main.models.*
 import com.foggyskies.chat.extendfun.forEachSuspend
-import com.foggyskies.chat.databases.main.models.Token
-import com.foggyskies.chat.databases.main.models.UsersSearch
 import io.ktor.http.cio.websocket.*
 import io.ktor.websocket.*
 import kotlinx.serialization.decodeFromString

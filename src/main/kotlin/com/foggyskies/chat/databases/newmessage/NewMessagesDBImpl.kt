@@ -1,15 +1,16 @@
 package com.foggyskies.chat.databases.newmessage
 
-import com.foggyskies.ServerDate
 //import com.foggyskies.chat.data.model.ChatMainEntity_
-import com.foggyskies.chat.databases.message.models.ChatMessageCollection
+import com.foggyskies.ServerDate
 import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.main.models.ChatMainEntity_
-import com.foggyskies.chat.databases.main.models.FriendDC
+import com.foggyskies.chat.databases.message.models.ChatMessageCollection
 import com.foggyskies.chat.databases.newmessage.datasources.NewMessageCollectionDataSource
 import com.foggyskies.chat.databases.newmessage.models.NewMessagesCollection
 import com.foggyskies.chat.databases.newmessage.models.WatchNewMessage
+import com.foggyskies.chat.extendfun.toBoolean
+import com.foggyskies.chat.routes.EditMessageEntity
 import com.mongodb.MongoCommandException
 import com.mongodb.client.model.changestream.OperationType
 import io.ktor.http.cio.websocket.*
@@ -74,7 +75,6 @@ class NewMessagesDBImpl(
 //            mutableListOf<NewMessagesCollection>()
 
 
-
         newMessages.consumeEach { item ->
             if (item.operationType == OperationType.INSERT || item.operationType == OperationType.UPDATE) {
                 //            if ((item.documentKey["_id"]?.asString())?.value.equals(idUser)) {
@@ -90,7 +90,7 @@ class NewMessagesDBImpl(
                         else
                             Pair(chat.secondCompanion!!, ChatMainEntity_.SecondCompanion)
 
-                    suspend fun sendNewMessages(){
+                    suspend fun sendNewMessages() {
                         val new_message = updatedFields.last()
                         val image = main.impl.getAvatarByIdUser(new_message.idUser)
                         val username = main.impl.getUserByIdUser(new_message.idUser).username
@@ -128,5 +128,14 @@ class NewMessagesDBImpl(
             NewMessagesCollection::id eq idChat,
             pullByFilter(NewMessagesCollection::new_messages, "{_id: '$idMessage'}".bson)
         ).matchedCount.toInt()
+    }
+
+    override suspend fun editMessage(editMessageEntity: EditMessageEntity): Boolean {
+
+        return getCollection(editMessageEntity.idUser).updateOne(
+            "{_id: '${editMessageEntity.idChat}', 'new_messages._id': '${editMessageEntity.idMessage}'}",
+            "{\$set: {'new_messages.$.message': '${editMessageEntity.newMessage}'} }"
+        ).modifiedCount.toInt().toBoolean()
+
     }
 }

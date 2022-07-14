@@ -8,13 +8,12 @@ import io.ktor.http.cio.websocket.*
 import io.ktor.response.*
 import io.ktor.routing.*
 import io.ktor.sessions.*
-import io.ktor.util.collections.*
 import io.ktor.websocket.*
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.consumeEach
 import org.koin.ktor.ext.inject
 
-private val listNotify = ConcurrentList<String>()
+private val listNotify = mutableListOf<String>()
 
 fun Route.notificationRoutes() {
     val routeController by inject<NotifyRoutController>()

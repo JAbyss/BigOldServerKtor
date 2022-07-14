@@ -3,7 +3,7 @@ package com.foggyskies.chat.routes
 import com.foggyskies.chat.data.model.ChatSession
 import com.foggyskies.chat.databases.message.models.MessageDC
 import com.foggyskies.chat.newroom.MessagesRoutController
-import com.jetbrains.handson.chat.server.chat.data.model.Member
+import com.foggyskies.chat.data.model.Member
 import io.ktor.application.*
 import io.ktor.http.*
 import io.ktor.http.cio.websocket.*
@@ -21,17 +21,41 @@ import java.io.File
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 
+//import com.foggyskies.chat.data.model.ChatSession
+//import com.foggyskies.chat.databases.message.models.MessageDC
+//import com.foggyskies.chat.newroom.MessagesRoutController
+//import com.foggyskies.chat.data.model.Member
+//import io.ktor.http.*
+//import io.ktor.server.application.*
+//import io.ktor.server.request.*
+//import io.ktor.server.response.*
+//import io.ktor.server.routing.*
+//import io.ktor.server.sessions.*
+//import io.ktor.server.websocket.*
+//
+//import io.ktor.util.collections.*
+//import io.ktor.websocket.*
+//import kotlinx.coroutines.channels.consumeEach
+//import kotlinx.serialization.decodeFromString
+//import kotlinx.serialization.json.Json
+//import org.koin.ktor.ext.inject
+//import org.litote.kmongo.text
+//import java.io.File
+//import java.util.*
+//import java.util.concurrent.ConcurrentHashMap
+
 private var sessionsChat = ConcurrentList<String>()
 
 fun Route.chatSessionRoutes() {
     route("/subscribes") {
+
         val routController by inject<MessagesRoutController>()
-        fun createSocket(idChat: String, sessionsChat: ConcurrentList<String>) {
+        fun createSocket(idChat: String, sessionsChat: MutableList<String>) {
             if (!sessionsChat.contains(idChat)) {
                 sessionsChat.add(idChat)
                 val members = ConcurrentHashMap<String, Member>()
-                webSocket("/$idChat{username}") {
 
+                webSocket("/$idChat{username}") {
 
                     val token =
                         call.request.headers["Auth"] ?: call.respond(HttpStatusCode.BadRequest, "Токен не получен.")
@@ -46,24 +70,7 @@ fun Route.chatSessionRoutes() {
 
                     val idUser = routController.getIdUserByToken(token.toString())
 
-                    try {
-                        post("/fileUpload") {
-
-                            val a = call.receive<BodyFile>()
-
-                            routController.loadFile(
-                                a.idChat.toString(),
-                                a.typeFile.toString(),
-                                a.contentFile.toString(),
-                                a.nameFile.toString(),
-                                a.status.toString(),
-                                a.idUser.toString(),
-                                session,
-                                members,
-                                chatEntity
-                            )
-                            call.respond(HttpStatusCode.OK)
-                        }
+//                    try {
                         routController.onJoin(
                             idUser = idUser,
                             username = session.username,
@@ -72,31 +79,59 @@ fun Route.chatSessionRoutes() {
                             members = members,
                             chatEntity = chatEntity
                         )
-                        incoming.consumeEach { frame ->
-                            if (frame is Frame.Text) {
-                                val rawMessage = frame.readText()
-                                val regexCommand = "^nextMessages".toRegex()
+                        post("/fileUpload") {
+
+                            try {
+
+                                val a = call.receive<BodyFile>()
+
+                                routController.loadFile(
+                                    a.idChat,
+                                    a.typeFile,
+                                    a.contentFile,
+                                    a.nameFile,
+                                    a.status,
+                                    a.idUser,
+                                    session,
+                                    members,
+                                    chatEntity
+                                )
+                            }catch (e: Exception){
+                                println(e)
+                            }
+                            call.respond(HttpStatusCode.OK)
+                        }
+                        try {
+//                            for (frame in incoming){
+                            incoming.consumeEach { frame ->
+                                if (frame is Frame.Text) {
+                                    val rawMessage = frame.readText()
+                                    val regexCommand = "^nextMessages".toRegex()
 
 
-                                if (regexCommand.find(rawMessage) != null) {
-                                    val lastMessageId = "(?<=\\|).+".toRegex().find(rawMessage)?.value!!
-                                    routController.sendNextMessages(this, chatEntity, lastMessageId)
-                                    println("Послал старые сообщения")
-                                } else {
-                                    val message = Json.decodeFromString<MessageDC>(rawMessage)
-                                    routController.sendMessage(
-                                        idUser = idUser,
-                                        senderUsername = session.username,
-                                        message = message,
-                                        members = members,
-                                        chatEntity = chatEntity
-                                    )
+                                    if (regexCommand.find(rawMessage) != null) {
+                                        val lastMessageId = "(?<=\\|).+".toRegex().find(rawMessage)?.value!!
+                                        routController.sendNextMessages(this, chatEntity, lastMessageId)
+                                        println("Послал старые сообщения")
+                                    } else {
+                                        val message = Json.decodeFromString<MessageDC>(rawMessage)
+                                        routController.sendMessage(
+                                            idUser = idUser,
+                                            senderUsername = session.username,
+                                            message = message,
+                                            members = members,
+                                            chatEntity = chatEntity
+                                        )
+                                    }
                                 }
                             }
+                        }catch (e: Exception){
+                            println(e)
                         }
-                    } catch (e: Exception) {
-                        println(e)
-                    }
+                    println("Я закрываюсь")
+//                    } catch (e: Exception) {
+//                        println(e)
+//                    }
                     routController.tryDisconnect(members = members, username = session.username)
                 }
             }
@@ -121,9 +156,9 @@ fun Route.chatSessionRoutes() {
             if (isTokenExist) {
                 val decodedString = Base64.getDecoder().decode(image.toString())
                 val addressImage = routController.addImageToChat(idChat.toString(), decodedString)
-                call.respond(HttpStatusCode.OK, addressImage)
+                call.respondText(status = HttpStatusCode.OK, text = addressImage)
             } else {
-                call.respond(HttpStatusCode.BadRequest, "Token не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Token не существует.")
             }
         }
         post("/deleteMessage") {
@@ -134,11 +169,23 @@ fun Route.chatSessionRoutes() {
             val isTokenExist = routController.checkOnExistToken(token.toString())
             if (isTokenExist) {
                 val code = routController.deleteMessage(deleteChatEntity)
-                call.respond(HttpStatusCode.OK, code)
+                call.respondText(status = HttpStatusCode.OK, text = code.toString())
             } else
-                call.respond(HttpStatusCode.BadRequest, "Токен не существует.")
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
         }
 
+        post("/editMessage") {
+            val token = call.request.headers["Auth"] ?: call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не получен.")
+
+            val editMessageEntity = call.receive<EditMessageEntity>()
+
+            val isTokenExist = routController.checkOnExistToken(token.toString())
+            if (isTokenExist) {
+                val code = routController.editMessage(editMessageEntity)
+                call.respondText(status = HttpStatusCode.OK, text = code.toString())
+            } else
+                call.respondText(status = HttpStatusCode.BadRequest, text = "Токен не существует.")
+        }
 //        fun createPostForLoadFile(idLoad: String){
 //            val a = post("/$idLoad") {
 //                call.respond(HttpStatusCode.OK, "Я ответил")
@@ -207,6 +254,20 @@ data class DeleteMessageEntity(
     val idUser: String,
     val idChat: String
 )
+
+@kotlinx.serialization.Serializable
+data class EditMessageEntity(
+    val idMessage: String,
+    val idUser: String,
+    val idChat: String,
+    val newMessage: String
+)
+
+//fun main() {
+//    val file = File("C:\\All project\\ServerPetAppKtor\\images\\chats\\62913f54cc47483b1695182a\\18c02871-c16d-4323-b5af-6a3667ac5ed6.mp4")
+//    println(file.length())
+//}
+
 //TODO ПЕРЕДАЧА ФАЙЛОВ ТУТ
 //suspend fun main() {
 //    val a = " kfajkfjakfwakjf"

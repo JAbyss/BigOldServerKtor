@@ -14,15 +14,15 @@ data class ContentUsersDC(
     var address: String,
     var description: String
 ){
-    fun toSelectedPostWithIdPageProfile(idPageProfile: String, idUser: String): SelectedPostWithIdPageProfile {
+    fun toSelectedPostWithIdPageProfile(idPageProfile: String, idUser: String, image: String, author: String): SelectedPostWithIdPageProfile {
         return SelectedPostWithIdPageProfile(
             idPageProfile = idPageProfile,
             item = ContentPreviewDC(
                 id = id,
                 address = address
             ),
-            image = "",
-            author = "",
+            image = image,
+            author = author,
             description = description,
             countComets = comments.size.toString(),
             countLikes = likes.size.toString(),

@@ -1,6 +1,7 @@
 package com.foggyskies.chat.newroom
 
 
+import com.foggyskies.PasswordCoder
 import com.foggyskies.ServerDate
 import com.foggyskies.chat.data.bettamodels.Notification
 import com.foggyskies.chat.data.model.ChatSession
@@ -8,7 +9,6 @@ import com.foggyskies.chat.data.model.ChatUserEntity
 import com.foggyskies.chat.data.model.ImpAndDB
 import com.foggyskies.chat.databases.main.MainDBImpl
 import com.foggyskies.chat.databases.main.models.ChatMainEntity
-import com.foggyskies.chat.databases.main.models.ChatMainEntity_
 import com.foggyskies.chat.databases.message.MessagesDBImpl
 import com.foggyskies.chat.databases.message.models.ChatMessageCollection
 import com.foggyskies.chat.databases.message.models.ChatMessageDC
@@ -18,8 +18,11 @@ import com.foggyskies.chat.databases.newmessage.NewMessagesDBImpl
 import com.foggyskies.chat.extendfun.forEachSuspend
 import com.foggyskies.chat.extendfun.getSizeFile
 import com.foggyskies.chat.routes.DeleteMessageEntity
-import com.jetbrains.handson.chat.server.chat.data.model.Member
+import com.foggyskies.chat.data.model.Member
+import com.foggyskies.chat.databases.main.models.ChatMainEntity_
+import com.foggyskies.chat.routes.EditMessageEntity
 import io.ktor.http.cio.websocket.*
+import io.ktor.websocket.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
@@ -140,6 +143,9 @@ class MessagesRoutController(
         } else {
             insertOne(chatEntity.idChat, messageEntity)
         }
+        println("Просто Пошло")
+//        members.values.forEach { member -> member.socket.send("fwafwaf") }
+//        members[senderUsername]?.socket?.send(Frame.Text("Hello"))
         members.values.forEach { member ->
             val parsedMessage = Json.encodeToString(
                 ChatMessageDC(
@@ -152,6 +158,7 @@ class MessagesRoutController(
                     author = senderUsername
                 )
             )
+            println("NewMessage Пошло")
             member.socket.send(parsedMessage)
         }
     }
@@ -338,6 +345,14 @@ class MessagesRoutController(
             1
     }
 
+    suspend fun editMessage(editMessageEntity: EditMessageEntity): Boolean {
+        return if (!message.impl.editMessage(editMessageEntity.idChat, editMessageEntity.idMessage, editMessageEntity.newMessage))
+            new_message.impl.editMessage(editMessageEntity)
+        else
+            true
+
+    }
+
     suspend fun checkOnExistFile() {
 
     }
@@ -354,36 +369,39 @@ class MessagesRoutController(
         chatEntity: ChatMainEntity
     ) {
 
-
-        if (!fileInLoads.containsKey(nameFile)){
-            val name = UUID.randomUUID().toString()
-            fileInLoads[nameFile] = name
-        }
+        try {
+            if (!fileInLoads.containsKey(nameFile)) {
+                val name = UUID.randomUUID().toString()
+                fileInLoads[nameFile] = name
+            }
 //                    "UUID.randomUUID().toString()"
-        val file = File("images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile")
-        withContext(Dispatchers.IO) {
-            file.createNewFile()
-            val decodedString = Base64.getDecoder().decode(contentFile)
-            file.appendBytes(decodedString)
-        }
-        if (status == "finish") {
-            sendMessage(
-                idUser,
-                senderUsername = session.username,
-                message = MessageDC(
-                    listFiles = listOf(
-                        FileDC(
-                            name = nameFile,
-                            size = getSizeFile(file.length()),
-                            type = typeFile,
-                            path = "images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile"
-                        )
+            val file = File("images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile")
+            withContext(Dispatchers.IO) {
+                file.createNewFile()
+                val decodedString = Base64.getDecoder().decode(contentFile)
+                file.appendBytes(decodedString)
+            }
+//            println("Пришло сюда file: ${file.absolutePath}")
+            if (status == "finish") {
+                println("ФИНИШ")
+
+                sendMessage(
+                    idUser,
+                    senderUsername = session.username,
+                    message = MessageDC(
+                        listFiles = listOf(
+                            FileDC(
+                                name = nameFile,
+                                size = getSizeFile(file.length()),
+                                type = typeFile,
+                                path = "images/chats/$idChat/${fileInLoads[nameFile]}.$typeFile"
+                            )
+                        ),
+                        message = ""
                     ),
-                    message = ""
-                ),
-                members = members,
-                chatEntity = chatEntity
-            )
+                    members = members,
+                    chatEntity = chatEntity
+                )
 //            message.impl.insertOne(
 //                idChat, ChatMessageCollection(
 //                    idUser = idUser,
@@ -397,12 +415,19 @@ class MessagesRoutController(
 //                    )
 //                )
 //            )
-            fileInLoads.remove(nameFile)
+                fileInLoads.remove(nameFile)
+            }
+        }catch (e: Exception){
+            println(e)
         }
     }
 }
 
 val fileInLoads = ConcurrentHashMap<String, String>()
+
+fun main() {
+    println(PasswordCoder.encodeStringFS("123456"))
+}
 
 //suspend fun main() {
 ////    coroutineScope {
