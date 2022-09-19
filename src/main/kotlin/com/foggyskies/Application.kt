@@ -22,68 +22,33 @@ package com.foggyskies
 //import javax.mail.internet.InternetAddress
 //import javax.mail.internet.MimeMessage
 
-import com.foggyskies.plugin.configureRouting
-import com.foggyskies.plugin.configureSecurity
-import com.foggyskies.plugin.configureSockets
-import com.foggyskies.plugin.mainModule
-import io.ktor.application.*
-import io.ktor.features.*
-import io.ktor.serialization.*
+import com.foggyskies.server.databases.mongo.codes.testpacage.Logger.logs
+import com.foggyskies.server.databases.mongo.main.models.UserMainEntity
+import com.foggyskies.server.plugin.configureRouting
+import com.foggyskies.server.plugin.configureSecurity
+import com.foggyskies.server.plugin.configureSockets
+import com.foggyskies.server.plugin.mainModule
+import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import io.ktor.server.application.*
+import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import org.koin.ktor.plugin.Koin
+import org.litote.kmongo.json
 import java.text.SimpleDateFormat
 import java.util.*
-import org.koin.ktor.ext.Koin
-import org.litote.kmongo.coroutine.coroutine
-import org.litote.kmongo.json
-import org.litote.kmongo.reactivestreams.KMongo
 
-//fun main() {
-//
-//    Json.encodeToString(FormattedItem<Char>(item = 'A', isVisible = false))
-//
-//    fun <T> List<T>.transformToFormattedItem(): MutableList<FormattedItem<T>> {
-//        val newList = mutableListOf<FormattedItem<T>>()
-//        this.forEach { item ->
-//            val newItem = FormattedItem(
-//                item = item,
-//                isVisible = false
-//            )
-//            newList.add(newItem)
-//        }
-//        return newList
-//    }
-//
-//    fun <T> MutableList<T>.processingList(work: OldListInfo<T>){
-//            work.newItemsList.forEach {
-//                this.add(it)
-//            }
-//    }
-//
-//    fun firstInit() {
-//        newList = mutableListOf('A', 'B', 'C', 'D')
-//        oldList = newList
-//        transformedList = newList.transformToFormattedItem()
-//        println("newList - $newList\n oldLsit - $oldList \n transformedList - $transformedList")
-//    }
-//
-//    fun secondStage(){
-//        newList = mutableListOf('A', 'V', 'V', 'D')
-//        checkOldListByNewList(oldList, newList)
-//    }
-//
-//
-//
-//    val oldList = mutableListOf<Char>('А', 'Г', 'Е', 'Д', 'F', 'L', 'Y', 'X')
-//    val newList = mutableListOf<Char>('А', 'Е', 'Ж', 'М', 'X', 'V')
-//
-//    val result = checkOldListByNewList(oldList, newList)
-//
-//    println(result)
-//
-//}
 
 enum class DataBases {
-    MAIN, MESSAGES, SUBSCRIBERS, CONTENT, NEW_MESSAGE
+    MAIN, MESSAGES, SUBSCRIBERS, CONTENT, NEW_MESSAGE, CODES
 }
 
 object ServerDate {
@@ -98,6 +63,30 @@ object ServerDate {
         get() = formatMute.format(Date())
 }
 
+val client = HttpClient(CIO) {
+    install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) {
+        json(Json {
+            prettyPrint = false
+            allowStructuredMapKeys = true
+            isLenient = true
+            ignoreUnknownKeys = true
+        }, contentType = ContentType.Application.Json)
+    }
+    install(HttpTimeout) {
+        requestTimeoutMillis = 20000
+    }
+}
+
+object Testss {
+    val user: UserMainEntity
+        get() = UserMainEntity(
+            username = UUID.randomUUID().toString(),
+            e_mail = UUID.randomUUID().toString(),
+            status = "",
+            password = UUID.randomUUID().toString()
+        )
+}
+
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused")
@@ -108,79 +97,78 @@ fun Application.module() {
     }
 //    install(Forward)
 //    install(ForwardedHeaderSupport)
+    install(CORS) {
+        anyHost()
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader("Auth")
+        //        header(HttpHeaders.ContentType)
+        //        header("Auth")
+    }
     install(ContentNegotiation) {
         json(Json {
-            prettyPrint = true
+            prettyPrint = false
+            allowStructuredMapKeys = true
             isLenient = true
             ignoreUnknownKeys = true
-        })
+        }, contentType = ContentType.Application.Json)
     }
-//    install(ForwardedHeaders)
-//    install(XForwardedHeaders)
+    //    install(ForwardedHeaders)
+    //    install(XForwardedHeaders)
     configureSockets()
     configureRouting()
     configureSecurity()
-}
-//suspend fun main() {
 //
-//    val a = KMongo.createClient("mongodb://localhost:27018/?directConnection=true")
-//        .coroutine
-//        .getDatabase("petapp_db")
-//    println(a.getCollection<UserMainEntity>().find().toList())
-//
-//}
-
-
-//fun main(args: Array<String>) {
-//    val userName =  "stingersword@gmail.com"
-//    val password =  "uvnatdpxaocmgdux"
-//    // FYI: passwords as a command arguments isn't safe
-//    // They go into your bash/zsh history and are visible when running ps
-//
-//    val emailFrom = "stingersword@gmail.com"
-//    val emailTo = "f.tiratore.k@gmail.com"
-////    val emailCC = "fawf@mail.ru"
-//    val code = generateUUID(4)
-////    val subject = "Код подтверждения"
-////    val text = "\n$code - код для подтверждения почты."
-//
-//    val subject = "Jarvis"
-//    val text = "Jarvis не дремлит."
-//
-//    val props = Properties()
-//    putIfMissing(props, "mail.smtp.host", "smtp.gmail.com")
-//    putIfMissing(props, "mail.smtp.port", "587")
-//    putIfMissing(props, "mail.smtp.auth", "true")
-//    putIfMissing(props, "mail.smtp.starttls.enable", "true")
-//
-//    val session = Session.getDefaultInstance(props, object : javax.mail.Authenticator() {
-//        override fun getPasswordAuthentication(): PasswordAuthentication {
-//            return PasswordAuthentication(userName, password)
+//    CoroutineScope(IO).launch {
+//        while (true) {
+//            println(logs.json)
+//            delay(1000)
 //        }
-//    })
-//
-//    session.debug = true
-//
-//    try {
-//        val mimeMessage = MimeMessage(session)
-//        mimeMessage.setFrom(InternetAddress(emailFrom))
-//        mimeMessage.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailTo, false))
-////        mimeMessage.setRecipients(Message.RecipientType.CC, InternetAddress.parse(emailCC, false))
-//        mimeMessage.setText(text)
-//        mimeMessage.subject = subject
-//        mimeMessage.sentDate = Date()
-//
-//        val smtpTransport = session.getTransport("smtp")
-//        smtpTransport.connect()
-//            smtpTransport.sendMessage(mimeMessage, mimeMessage.allRecipients)
-//        smtpTransport.close()
-//    } catch (messagingException: MessagingException) {
-//        messagingException.printStackTrace()
 //    }
-//}
+
+
+//    val map = HashMap<String,suspend () -> Unit>()
 //
-//private fun putIfMissing(props: Properties, key: String, value: String) {
-//    if (!props.containsKey(key)) {
-//        props[key] = value
+//    val a: Long = 10L
+//
+//    map["wfkwa"] = suspend {
+//        delay(9223372036854775807L)
+//        map.remove("wfkwa")
+//        println("Сделал дело")
 //    }
-//}
+
+//    suspend fun startTask(action: () -> Unit, duration: Long): Deferred<Unit> {
+//
+//        return async {
+//            delay(duration)
+//            action()
+//        }
+//    }
+//
+//    val map = ConcurrentHashMap<String, Deferred<Unit>>()
+//
+////    val a = ConcurrentHashMap
+//
+//    suspend fun startTaksMap(code: String, duration: Long) {
+//        map[code] = startTask(action = {
+////            println("$code task")
+//            map.remove(code)?.cancel()
+//        }, duration)
+//    }
+//
+//    val a = 100_000
+//
+//    println(a)
+//
+//    launch(newSingleThreadContext("task-thread")) {
+//
+//        println(Thread.currentThread())
+//        while (map.size < 200) {
+//            val uuid = generateUUID(10)
+//            val duration = kotlin.random.Random.nextLong(from = 1000, until = 8000)
+//            startTaksMap(uuid, duration)
+//            delay(10)
+////                println(map.size)
+//        }
+//    }
+
+}
