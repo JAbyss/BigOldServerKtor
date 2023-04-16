@@ -1,7 +1,7 @@
 package com.foggyskies.server.routes.auth.requests
 
 import com.foggyskies.server.databases.mongo.codes.models.VerifyCodeDC
-import com.foggyskies.server.databases.mongo.codes.testpacage.codes.CodesDataBase
+import com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase
 import com.foggyskies.server.databases.mongo.main.models.RegistrationUserDC
 import com.foggyskies.server.extendfun.generateUUID
 import com.foggyskies.server.plugin.EmailSender
@@ -45,11 +45,11 @@ fun Route.generateCode() = cRoute(
 
 
 private suspend fun startTask(code: String, e_mail: String) {
-    CodesDataBase.getCodeByID<VerifyCodeDC>(e_mail) ?:
+    com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.getCodeByID<VerifyCodeDC>(e_mail) ?:
     TaskManager.addTask(TaskManager.Task(code = code, duration = verify, before_action = {
-        CodesDataBase.insertCodes(VerifyCodeDC(e_mail, code))
+        com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.insertCodes(VerifyCodeDC(e_mail, code))
         EmailSender.sendCode(e_mail, code)
     }) {
-        CodesDataBase.deleteCode<VerifyCodeDC>(e_mail)
+        com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.deleteCode<VerifyCodeDC>(e_mail)
     })
 }

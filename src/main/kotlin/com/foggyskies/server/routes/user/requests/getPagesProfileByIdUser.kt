@@ -1,6 +1,6 @@
 package com.foggyskies.server.routes.user.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getPageById
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getUserByIdUser
@@ -49,7 +49,7 @@ private suspend fun getAllPagesByList(listIds: List<String>): List<PageProfileFo
                 val countSubscribers =
                     SubscribeDataBase.db.getCollection<SubscribersDC>("subscribers_${it.id}").countDocuments()
                         .toString()
-                val countContent = (ContentDataBase.Content.getCollection(it.id).countDocuments() - 1).toString()
+                val countContent = (com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getCollection(it.id).countDocuments() - 1).toString()
 
                 it.withCountSubsAndContents(countSubscribers, countContent)
             }

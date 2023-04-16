@@ -2,7 +2,7 @@ package com.foggyskies.server.routes.chat.requests
 
 import com.foggyskies.server.databases.message.models.ChatMessageCollection
 import com.foggyskies.server.databases.message.models.MessageDC
-import com.foggyskies.server.databases.mongo.codes.testpacage.Logger
+import com.foggyskies.server.databases.mongo.testpacage.Logger
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getChatById
 import com.foggyskies.server.databases.mongo.codes.testpacage.messages.MessagesDataBase

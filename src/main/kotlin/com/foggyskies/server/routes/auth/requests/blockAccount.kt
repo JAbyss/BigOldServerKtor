@@ -3,7 +3,7 @@ package com.foggyskies.server.routes.auth.requests
 import com.foggyskies.ServerDate
 import com.foggyskies.server.databases.mongo.codes.models.InfoLockDC
 import com.foggyskies.server.databases.mongo.codes.models.LockCodeDC
-import com.foggyskies.server.databases.mongo.codes.testpacage.codes.CodesDataBase
+import com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.lockUser
 import com.foggyskies.server.databases.mongo.main.models.BlockUserDC
@@ -30,19 +30,19 @@ fun Route.blockAccount() = cRoute(
 }
 
 private suspend inline fun checkCode(idCode: String, existAction: (LockCodeDC) -> Unit): Unit? {
-    val code = CodesDataBase.getCodeByID<LockCodeDC>(idCode) ?: return null
+    val code = com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.getCodeByID<LockCodeDC>(idCode) ?: return null
     return existAction(code)
 }
 
 private suspend inline fun blockUser(lockCode: LockCodeDC) {
 
-    val infoLock = CodesDataBase.getCodeByID<InfoLockDC>(lockCode.lock_code)!!
+    val infoLock = com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.getCodeByID<InfoLockDC>(lockCode.lock_code)!!
     val block = BlockUserDC(
         lock_code = infoLock.id,
         time_lock = ServerDate.fullDate,
         time_unlock = infoLock.time_to_block
     )
-    CodesDataBase.insertCodes(block)
+    com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.insertCodes(block)
     MainDataBase.Users.lockUser(lockCode.idUser, true)
-    CodesDataBase.deleteCode<LockCodeDC>(lockCode.id)
+    com.foggyskies.server.databases.mongo.testpacage.codes.CodesDataBase.deleteCode<LockCodeDC>(lockCode.id)
 }

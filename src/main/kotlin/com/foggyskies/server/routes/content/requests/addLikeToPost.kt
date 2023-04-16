@@ -1,9 +1,9 @@
 package com.foggyskies.server.routes.content.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.addLikeToPost
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.delLikeToPost
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.getInfoAboutOnePost
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.addLikeToPost
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.delLikeToPost
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.getInfoAboutOnePost
 import com.foggyskies.server.databases.mongo.content.models.IdPageAndPost
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
@@ -37,12 +37,12 @@ fun Route.addLikeToPost(isCheckToken: Boolean) = cRoute(
 
 suspend fun addLikeToPost(idPageProfile: String, idPost: String, idUser: String): Boolean {
 
-    val likesList = ContentDataBase.Content.getInfoAboutOnePost(idPageProfile, idPost)?.likes ?: emptyList()
+    val likesList = com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getInfoAboutOnePost(idPageProfile, idPost)?.likes ?: emptyList()
     return if (!likesList.contains(idUser)) {
-        ContentDataBase.Content.addLikeToPost(idPageProfile, idPost, idUser)
+        com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.addLikeToPost(idPageProfile, idPost, idUser)
         true
     } else {
-        ContentDataBase.Content.delLikeToPost(idPageProfile, idPost, idUser)
+        com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.delLikeToPost(idPageProfile, idPost, idUser)
         false
     }
 }

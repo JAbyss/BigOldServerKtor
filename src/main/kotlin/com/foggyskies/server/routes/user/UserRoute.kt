@@ -35,8 +35,8 @@ fun Route.usersRoutes() {
     getRequestsFriends(true)
     getNewMessages(true)
 
-    logOut(true)
-
+//    logOut(true)
+//TODO убрать
     deletePageProfile(true)
 
     searchUser(true)

@@ -1,29 +1,5 @@
 package com.foggyskies
 
-//import com.foggyskies.chat.extendfun.generateUUID
-//import com.foggyskies.plugin.configureRouting
-//import com.foggyskies.plugin.configureSecurity
-//import com.foggyskies.plugin.configureSockets
-//import com.foggyskies.plugin.mainModule
-//import io.ktor.http.*
-//import io.ktor.serialization.kotlinx.json.*
-//import io.ktor.server.application.*
-////import io.ktor.server.application.*
-//import io.ktor.server.plugins.contentnegotiation.*
-//import io.ktor.server.plugins.forwardedheaders.*
-//import kotlinx.serialization.json.Json
-//import org.koin.ktor.plugin.Koin
-//import java.text.SimpleDateFormat
-//import java.util.*
-//import javax.mail.Message
-//import javax.mail.MessagingException
-//import javax.mail.PasswordAuthentication
-//import javax.mail.Session
-//import javax.mail.internet.InternetAddress
-//import javax.mail.internet.MimeMessage
-
-import com.foggyskies.server.databases.mongo.codes.testpacage.Logger.logs
-import com.foggyskies.server.databases.mongo.main.models.UserMainEntity
 import com.foggyskies.server.plugin.configureRouting
 import com.foggyskies.server.plugin.configureSecurity
 import com.foggyskies.server.plugin.configureSockets
@@ -36,13 +12,8 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.plugins.cors.routing.*
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers.IO
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.koin.ktor.plugin.Koin
-import org.litote.kmongo.json
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -77,16 +48,6 @@ val client = HttpClient(CIO) {
     }
 }
 
-object Testss {
-    val user: UserMainEntity
-        get() = UserMainEntity(
-            username = UUID.randomUUID().toString(),
-            e_mail = UUID.randomUUID().toString(),
-            status = "",
-            password = UUID.randomUUID().toString()
-        )
-}
-
 fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
 @Suppress("unused")
@@ -101,8 +62,6 @@ fun Application.module() {
         anyHost()
         allowHeader(HttpHeaders.ContentType)
         allowHeader("Auth")
-        //        header(HttpHeaders.ContentType)
-        //        header("Auth")
     }
     install(ContentNegotiation) {
         json(Json {
@@ -112,63 +71,7 @@ fun Application.module() {
             ignoreUnknownKeys = true
         }, contentType = ContentType.Application.Json)
     }
-    //    install(ForwardedHeaders)
-    //    install(XForwardedHeaders)
     configureSockets()
     configureRouting()
     configureSecurity()
-//
-//    CoroutineScope(IO).launch {
-//        while (true) {
-//            println(logs.json)
-//            delay(1000)
-//        }
-//    }
-
-
-//    val map = HashMap<String,suspend () -> Unit>()
-//
-//    val a: Long = 10L
-//
-//    map["wfkwa"] = suspend {
-//        delay(9223372036854775807L)
-//        map.remove("wfkwa")
-//        println("Сделал дело")
-//    }
-
-//    suspend fun startTask(action: () -> Unit, duration: Long): Deferred<Unit> {
-//
-//        return async {
-//            delay(duration)
-//            action()
-//        }
-//    }
-//
-//    val map = ConcurrentHashMap<String, Deferred<Unit>>()
-//
-////    val a = ConcurrentHashMap
-//
-//    suspend fun startTaksMap(code: String, duration: Long) {
-//        map[code] = startTask(action = {
-////            println("$code task")
-//            map.remove(code)?.cancel()
-//        }, duration)
-//    }
-//
-//    val a = 100_000
-//
-//    println(a)
-//
-//    launch(newSingleThreadContext("task-thread")) {
-//
-//        println(Thread.currentThread())
-//        while (map.size < 200) {
-//            val uuid = generateUUID(10)
-//            val duration = kotlin.random.Random.nextLong(from = 1000, until = 8000)
-//            startTaksMap(uuid, duration)
-//            delay(10)
-////                println(map.size)
-//        }
-//    }
-
 }

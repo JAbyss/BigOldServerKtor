@@ -5,9 +5,10 @@ import io.ktor.server.routing.*
 
 fun Route.authRoutes() {
 
-    blockAccount()
-    generateCode()
-    registration()
-    auth()
-    checkToken()
+//    blockAccount()
+//    generateCode()
+//    registration()
+//    auth()
+        //TODO УБрать
+//    checkToken()
 }

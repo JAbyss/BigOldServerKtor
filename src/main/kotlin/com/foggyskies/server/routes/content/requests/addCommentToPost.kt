@@ -1,7 +1,7 @@
 package com.foggyskies.server.routes.content.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.addNewComment
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.addNewComment
 import com.foggyskies.server.databases.mongo.content.models.CommentDC
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
@@ -34,7 +34,7 @@ fun Route.addCommentToPost(isCheckToken: Boolean) = cRoute(
 private suspend fun addNewComment(idPageProfile: String, idPost: String, comment: CommentDC){
     val sdf = SimpleDateFormat("hh:mm")
     val currentDate = sdf.format(Date())
-    ContentDataBase.Content.addNewComment(
+    com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.addNewComment(
         idPageProfile,
         idPost,
         comment.copy(id = ObjectId().toString(), date = currentDate)

@@ -1,7 +1,7 @@
 package com.foggyskies.server.routes.content.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.getFirstFiftyContentPreview
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.getFirstFiftyContentPreview
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
 import io.ktor.http.*
@@ -18,7 +18,7 @@ fun Route.getContentPreview(isCheckToken: Boolean) = cRoute(
     val idPageProfile =
         call.request.queryParameters["idPageProfile"] ?: return@cRoute call.respond(HttpStatusCode.BadRequest, "Id не получен.")
 
-    val content = ContentDataBase.Content.getFirstFiftyContentPreview(idPageProfile)
+    val content = com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getFirstFiftyContentPreview(idPageProfile)
 
     call.respond(HttpStatusCode.OK, content)
 }

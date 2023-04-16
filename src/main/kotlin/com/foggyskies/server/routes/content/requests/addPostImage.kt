@@ -1,8 +1,8 @@
 package com.foggyskies.server.routes.content.requests
 
 import com.foggyskies.server.data.model.ContentRequestDC
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.addNewContent
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.addNewContent
 import com.foggyskies.server.databases.mongo.content.models.ContentPreviewDC
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
@@ -36,5 +36,5 @@ private suspend fun addNewContent(item: ContentRequestDC, callback: suspend (Con
 //    File(pathFile).writeBytes(decodedString)
     val newPostReady = item.item.toNewPost()
     callback(newPostReady.toContentPreview())
-    ContentDataBase.Content.addNewContent(item.idPageProfile, newPostReady)
+    com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.addNewContent(item.idPageProfile, newPostReady)
 }

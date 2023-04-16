@@ -1,7 +1,7 @@
 package com.foggyskies.server.routes.content.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.getAllLikedUsers
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.getAllLikedUsers
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
 import io.ktor.http.*
@@ -25,6 +25,6 @@ fun Route.getLikedUsers(isCheckToken: Boolean) = cRoute(
         text = "IdPost не получен."
     )
 
-    val likedUsers = ContentDataBase.Content.getAllLikedUsers(idPageProfile, idPost)
+    val likedUsers = com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getAllLikedUsers(idPageProfile, idPost)
     call.respond(likedUsers)
 }

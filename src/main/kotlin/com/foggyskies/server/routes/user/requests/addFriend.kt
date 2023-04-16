@@ -2,9 +2,7 @@ package com.foggyskies.server.routes.user.requests
 
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.addRequestFriendsByIdUser
-import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getTokenByToken
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getUserByIdUser
-import com.foggyskies.server.databases.mongo.main.models.IdUserReceiver
 import com.foggyskies.server.databases.mongo.main.models.UserMainEntity
 import com.foggyskies.server.plugin.SystemRouting
 import com.foggyskies.server.plugin.cRoute
@@ -32,11 +30,11 @@ fun Route.addFiend(
 private suspend fun sendRequestFriend(user: String, idUserReceiver: String) {
     MainDataBase.Requests.addRequestFriendsByIdUser(idUserReceiver, user)
 }
-
-suspend inline fun getUserByToken(token: String): UserMainEntity {
-    val idUser = MainDataBase.TokenCol.getTokenByToken(token).idUser
-    return MainDataBase.Users.getUserByIdUser(idUser)
-}
+//TODO убрать
+//suspend inline fun getUserByToken(token: String): UserMainEntity {
+//    val idUser = MainDataBase.TokenCol.getTokenByToken(token).idUser
+//    return MainDataBase.Users.getUserByIdUser(idUser)
+//}
 
 suspend inline fun getUserByIdUser(idUser: String): UserMainEntity {
     return MainDataBase.Users.getUserByIdUser(idUser)

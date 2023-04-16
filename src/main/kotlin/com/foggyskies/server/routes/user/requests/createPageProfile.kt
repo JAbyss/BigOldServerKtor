@@ -3,7 +3,7 @@ package com.foggyskies.server.routes.user.requests
 import SystemDoc
 import com.foggyskies.ServerDate
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.addOnePage
 import com.foggyskies.server.databases.mongo.codes.testpacage.subscribe.SubscribeDataBase
 import com.foggyskies.server.databases.mongo.main.models.PageProfileDC
@@ -54,13 +54,13 @@ fun Route.createPageProfile(isCheckToken: Boolean = SettingRequests.isCheckToken
 suspend fun addOnePage(idUser: String, item: PageProfileDC) {
     MainDataBase.PagesProfile.addOnePage(item)
     SubscribeDataBase.db.createCollection("${SubscribeDataBase.NamesCollections.subscribers}${item.id}")
-    ContentDataBase.db.createCollection("${ContentDataBase.NameCollection.content}${item.id}")
+    com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.db.createCollection("${com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.NameCollection.content}${item.id}")
 
     val systemDoc = SystemDoc(
         date_create = ServerDate.fullDate,
         owner_id = idUser
     )
-    ContentDataBase.db.getCollection<SystemDoc>("content_${item.id}").insertOne(systemDoc)
+    com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.db.getCollection<SystemDoc>("content_${item.id}").insertOne(systemDoc)
     MainDataBase.db.getCollection<UserMainEntity>("users")
         .findOneAndUpdate(UserMainEntity::idUser eq idUser, addToSet(UserMainEntity::pages_profile, item.id))
 }

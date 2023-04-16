@@ -2,6 +2,8 @@ package com.foggyskies.server.plugin
 
 object SystemRouting {
 
+    private const val baseUrl = "http://"
+
     const val ipServer = "http://109.195.147.44:2525"
 
     object Files{
@@ -49,6 +51,7 @@ object SystemRouting {
         const val generateCode = "/generateCode"
         const val registration = "/registration"
         const val checkToken = "/checkToken"
+        const val verifyToken = "/verifyToken"
         const val auth = "/auth"
         const val blockAccount = "/blockAccount{code}"
     }
@@ -77,5 +80,18 @@ object SystemRouting {
         const val getNewMessages = "/getNewMessages"
 
         const val chatSessions = "/chatSessions"
+    }
+
+    object AuthServerURL {
+        private const val ip = "0.0.0.0"
+        private const val port = 22221
+
+        const val AuthServer = "$baseUrl$ip:$port"
+
+        const val checkToken = "verifyToken"
+        const val verifyTokenLocal = "verifyTokenLocal"
+
+        val CheckTokenPath
+            get() = "$AuthServer/$verifyTokenLocal"
     }
 }

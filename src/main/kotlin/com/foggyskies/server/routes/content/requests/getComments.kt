@@ -1,7 +1,7 @@
 package com.foggyskies.server.routes.content.requests
 
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.getOnePostComments
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.getOnePostComments
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getAvatarByIdUser
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getUserByIdUser
@@ -28,7 +28,7 @@ fun Route.getComments(isCheckToken: Boolean) = cRoute(
     val idPost =
         call.request.queryParameters["idPost"] ?: return@cRoute call.respond(HttpStatusCode.BadRequest, "IdPost не получен.")
 
-    val comments = ContentDataBase.Content.getOnePostComments(idPageProfile, idPost)
+    val comments = com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getOnePostComments(idPageProfile, idPost)
 
     val idsAndUsername = hashMapOf<String, UserIUSI>()
 

@@ -4,8 +4,8 @@ import KeyPost
 import SelectedPostWithIdPageProfile
 import SystemDoc
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.MainDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.ContentDataBase
-import com.foggyskies.server.databases.mongo.codes.testpacage.content.collections.getInfoAboutOnePost
+import com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase
+import com.foggyskies.server.databases.mongo.testpacage.content.collections.getInfoAboutOnePost
 import com.foggyskies.server.databases.mongo.codes.testpacage.main.collections.getAvatarByIdUser
 import com.foggyskies.server.databases.mongo.content.models.IdPageAndPost
 import com.foggyskies.server.plugin.SystemRouting
@@ -35,13 +35,13 @@ suspend fun getInfoAboutOnePost(
     idUser: String
 ): SelectedPostWithIdPageProfile? {
     val systemDoc =
-        ContentDataBase.db.getCollection<SystemDoc>("content_$idPageProfile").findOne("{_id: {\$eq: 'system'}}")
+        com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.db.getCollection<SystemDoc>("content_$idPageProfile").findOne("{_id: {\$eq: 'system'}}")
     val keyPost = KeyPost(idPage = idPageProfile)
     systemDoc?.let {
         keyPost.username = getUserByIdUser(it.owner_id).username
         keyPost.avatar = MainDataBase.Avatars.getAvatarByIdUser(it.owner_id)
     }
 
-    return ContentDataBase.Content.getInfoAboutOnePost(idPageProfile, idPost)
+    return com.foggyskies.server.databases.mongo.testpacage.content.ContentDataBase.Content.getInfoAboutOnePost(idPageProfile, idPost)
         ?.toSelectedPostWithIdPageProfile(idPageProfile, idUser, keyPost.avatar, keyPost.username)
 }
